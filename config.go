@@ -21,6 +21,8 @@ type Config struct {
 	HTTPTimeout   time.Duration
 	MaxRetries    int
 	LogLevel      slog.Level
+	COGEnabled    bool
+	COGCompress   string
 }
 
 func LoadConfig() (*Config, error) {
@@ -47,6 +49,19 @@ func LoadConfig() (*Config, error) {
 		HTTPTimeout:   60 * time.Second,
 		MaxRetries:    3,
 		LogLevel:      slog.LevelInfo,
+		COGEnabled:    true,
+		COGCompress:   envOrDefault("COG_COMPRESS", "DEFLATE"),
+	}
+
+	if v := os.Getenv("COG_ENABLED"); v != "" {
+		switch v {
+		case "true", "1":
+			cfg.COGEnabled = true
+		case "false", "0":
+			cfg.COGEnabled = false
+		default:
+			return nil, fmt.Errorf("invalid COG_ENABLED %q: must be true or false", v)
+		}
 	}
 
 	if v := os.Getenv("POLL_INTERVAL"); v != "" {

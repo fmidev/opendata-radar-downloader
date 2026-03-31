@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 	"time"
@@ -22,15 +23,21 @@ func DownloadIfNew(ctx context.Context, client *http.Client, m Member, cfg *Conf
 		return nil
 	}
 
+	// When COG is enabled, download to a raw file first, then convert
+	downloadPath := filePath
+	if cfg.COGEnabled {
+		downloadPath = filePath + ".raw"
+	}
+
 	var lastErr error
 	for attempt := 1; attempt <= cfg.MaxRetries; attempt++ {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
-		lastErr = downloadFile(ctx, client, m.FileReference, filePath)
+		lastErr = downloadFile(ctx, client, m.FileReference, downloadPath)
 		if lastErr == nil {
-			return nil
+			break
 		}
 
 		if isNoSpace(lastErr) {
@@ -55,7 +62,60 @@ func DownloadIfNew(ctx context.Context, client *http.Client, m Member, cfg *Conf
 		}
 	}
 
-	return fmt.Errorf("download failed after %d attempts: %w", cfg.MaxRetries, lastErr)
+	if lastErr != nil {
+		return fmt.Errorf("download failed after %d attempts: %w", cfg.MaxRetries, lastErr)
+	}
+
+	if cfg.COGEnabled {
+		if err := convertToCOG(ctx, downloadPath, filePath, cfg.COGCompress); err != nil {
+			slog.Error("COG conversion failed, keeping raw file",
+				"file", fileName,
+				"raw", downloadPath,
+				"error", err,
+			)
+			return err
+		}
+		os.Remove(downloadPath)
+	}
+
+	return nil
+}
+
+func convertToCOG(ctx context.Context, srcPath, destPath, compress string) error {
+	start := time.Now()
+
+	tmpPath := destPath + ".cog.tmp"
+	cmd := exec.CommandContext(ctx, "gdal_translate",
+		"-of", "COG",
+		"-co", "COMPRESS="+compress,
+		srcPath, tmpPath,
+	)
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("gdal_translate: %w", err)
+	}
+
+	if err := os.Chmod(tmpPath, 0o644); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("setting COG file permissions: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, destPath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("renaming COG file: %w", err)
+	}
+
+	info, _ := os.Stat(destPath)
+	duration := time.Since(start)
+	slog.Info("COG conversion complete",
+		"file", filepath.Base(destPath),
+		"size", info.Size(),
+		"duration", duration.Round(time.Millisecond),
+	)
+
+	return nil
 }
 
 func downloadFile(ctx context.Context, client *http.Client, url, destPath string) error {

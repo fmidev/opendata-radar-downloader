@@ -56,6 +56,8 @@ All configuration is via environment variables.
 | `HTTP_TIMEOUT` | `60s` | HTTP client timeout |
 | `MAX_RETRIES` | `3` | Max download retry attempts per file |
 | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `COG_ENABLED` | `true` | Convert downloads to Cloud Optimized GeoTIFF |
+| `COG_COMPRESS` | `DEFLATE` | COG compression: `DEFLATE`, `LZW`, `ZSTD`, `NONE` |
 
 Duration values use Go duration syntax (e.g., `30s`, `2m`, `1m30s`).
 
@@ -72,6 +74,7 @@ docker run -d \
 ## Features
 
 - Polls FMI WFS endpoint and downloads new GeoTIFF files automatically
+- Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
 - Atomic file writes (temp file + rename) to prevent partial files
 - Deduplication by checking existing files on disk
 - Retry with exponential backoff on download failures
@@ -80,7 +83,7 @@ docker run -d \
 - Structured JSON logging via `slog`
 - Health check via `.last_successful_poll` timestamp file
 - Handles FMI OWS ExceptionReport responses
-- No external Go dependencies (stdlib only)
+- No external Go dependencies (stdlib only, GDAL for COG conversion)
 
 ## Health check
 
