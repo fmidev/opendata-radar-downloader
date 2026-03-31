@@ -9,36 +9,16 @@ import (
 	"time"
 )
 
-type Member struct {
-	PhenomenonTime time.Time
-	FileReference  string
+// FMISource fetches radar files from the FMI WFS endpoint.
+type FMISource struct {
+	URL    string
+	Prefix string
 }
 
-type xmlMember struct {
-	Observation struct {
-		PhenomenonTime struct {
-			TimeInstant struct {
-				TimePosition string `xml:"timePosition"`
-			} `xml:"TimeInstant"`
-		} `xml:"phenomenonTime"`
-		Result struct {
-			GridCoverage struct {
-				RangeSet struct {
-					File struct {
-						FileReference string `xml:"fileReference"`
-					} `xml:"File"`
-				} `xml:"rangeSet"`
-			} `xml:"RectifiedGridCoverage"`
-		} `xml:"result"`
-	} `xml:"GridSeriesObservation"`
-}
+func (s *FMISource) Name() string { return s.Prefix }
 
-type owsException struct {
-	ExceptionText string `xml:"Exception>ExceptionText"`
-}
-
-func FetchWFS(ctx context.Context, client *http.Client, url string) ([]Member, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (s *FMISource) FetchFiles(ctx context.Context, client *http.Client) ([]RadarFile, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.URL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -53,7 +33,7 @@ func FetchWFS(ctx context.Context, client *http.Client, url string) ([]Member, e
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var members []Member
+	var files []RadarFile
 	decoder := xml.NewDecoder(resp.Body)
 
 	for {
@@ -92,12 +72,35 @@ func FetchWFS(ctx context.Context, client *http.Client, url string) ([]Member, e
 				return nil, fmt.Errorf("parsing time %q: %w", xm.Observation.PhenomenonTime.TimeInstant.TimePosition, err)
 			}
 
-			members = append(members, Member{
-				PhenomenonTime: t,
-				FileReference:  xm.Observation.Result.GridCoverage.RangeSet.File.FileReference,
+			files = append(files, RadarFile{
+				Timestamp:   t,
+				DownloadURL: xm.Observation.Result.GridCoverage.RangeSet.File.FileReference,
 			})
 		}
 	}
 
-	return members, nil
+	return files, nil
+}
+
+type xmlMember struct {
+	Observation struct {
+		PhenomenonTime struct {
+			TimeInstant struct {
+				TimePosition string `xml:"timePosition"`
+			} `xml:"TimeInstant"`
+		} `xml:"phenomenonTime"`
+		Result struct {
+			GridCoverage struct {
+				RangeSet struct {
+					File struct {
+						FileReference string `xml:"fileReference"`
+					} `xml:"File"`
+				} `xml:"rangeSet"`
+			} `xml:"RectifiedGridCoverage"`
+		} `xml:"result"`
+	} `xml:"GridSeriesObservation"`
+}
+
+type owsException struct {
+	ExceptionText string `xml:"Exception>ExceptionText"`
 }

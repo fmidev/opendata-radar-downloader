@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -10,12 +12,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
 
-func DownloadIfNew(ctx context.Context, client *http.Client, m Member, cfg *Config) error {
-	fileName := m.PhenomenonTime.Format("20060102150405") + "_" + cfg.FilePrefix + ".tif"
+func DownloadIfNew(ctx context.Context, client *http.Client, rf RadarFile, cfg *Config) error {
+	fileName := rf.Timestamp.Format("20060102150405") + "_" + cfg.FilePrefix + ".tif"
 	filePath := filepath.Join(cfg.OutputDir, fileName)
 
 	if _, err := os.Stat(filePath); err == nil {
@@ -35,7 +38,7 @@ func DownloadIfNew(ctx context.Context, client *http.Client, m Member, cfg *Conf
 			return ctx.Err()
 		}
 
-		lastErr = downloadFile(ctx, client, m.FileReference, downloadPath)
+		lastErr = downloadFile(ctx, client, rf.DownloadURL, downloadPath)
 		if lastErr == nil {
 			break
 		}
@@ -66,6 +69,13 @@ func DownloadIfNew(ctx context.Context, client *http.Client, m Member, cfg *Conf
 		return fmt.Errorf("download failed after %d attempts: %w", cfg.MaxRetries, lastErr)
 	}
 
+	if rf.Checksum != "" {
+		if err := verifyChecksum(downloadPath, rf.Checksum); err != nil {
+			os.Remove(downloadPath)
+			return fmt.Errorf("checksum verification: %w", err)
+		}
+	}
+
 	if cfg.COGEnabled {
 		if err := convertToCOG(ctx, downloadPath, filePath, cfg.COGCompress); err != nil {
 			slog.Error("COG conversion failed, keeping raw file",
@@ -78,6 +88,38 @@ func DownloadIfNew(ctx context.Context, client *http.Client, m Member, cfg *Conf
 		os.Remove(downloadPath)
 	}
 
+	return nil
+}
+
+func verifyChecksum(filePath, expected string) error {
+	// MET Norway uses "multihash-sha256:{hex}" format
+	expectedHex := expected
+	if after, ok := strings.CutPrefix(expected, "multihash-sha256:"); ok {
+		expectedHex = after
+	} else if after, ok := strings.CutPrefix(expected, "sha256:"); ok {
+		expectedHex = after
+	} else {
+		slog.Debug("unknown checksum format, skipping verification", "checksum", expected)
+		return nil
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("opening file: %w", err)
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return fmt.Errorf("reading file: %w", err)
+	}
+
+	actual := hex.EncodeToString(h.Sum(nil))
+	if actual != expectedHex {
+		return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedHex, actual)
+	}
+
+	slog.Debug("checksum verified", "file", filepath.Base(filePath))
 	return nil
 }
 

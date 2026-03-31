@@ -1,15 +1,19 @@
-# FMI Radar Downloader
+# OpenData Radar Downloader
 
-Continuously polls the [FMI Open Data](https://en.ilmatieteenlaitos.fi/open-data) WFS endpoint and downloads radar composite GeoTIFF files as they become available.
+Continuously polls radar data APIs and downloads GeoTIFF files as they become available. Supports multiple data sources:
+
+- **FMI Open Data** (Finnish Meteorological Institute) — WFS endpoint
+- **MET Norway** (Norwegian Meteorological Institute) — STAC API
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
 ## Output files
 
-Files are named with the observation timestamp and stored query:
+Files are named with the observation timestamp and source prefix:
 
 ```
 20260331084500_fmi_radar_composite_dbz.tif
+20260331084500_metno_radar.tif
 ```
 
 ## Quick start
@@ -20,13 +24,24 @@ Files are named with the observation timestamp and stored query:
 docker compose up -d
 ```
 
-Files are written to `./data/`.
+This starts both FMI and MET Norway downloaders. Files are written to `./data/fmi/` and `./data/metno/`.
 
-### Docker
+### Docker (single source)
 
+FMI (default):
 ```bash
 docker run -d \
   -v $(pwd)/data:/data \
+  -e OUTPUT_DIR=/data \
+  --restart unless-stopped \
+  ghcr.io/fmidev/opendata-radar-downloader:latest
+```
+
+MET Norway:
+```bash
+docker run -d \
+  -v $(pwd)/data:/data \
+  -e SOURCE=metno \
   -e OUTPUT_DIR=/data \
   --restart unless-stopped \
   ghcr.io/fmidev/opendata-radar-downloader:latest
@@ -37,19 +52,21 @@ docker run -d \
 Requires Go 1.24+.
 
 ```bash
-go build -o fmi-radar-downloader .
-OUTPUT_DIR=./data ./fmi-radar-downloader
+go build -o opendata-radar-downloader .
+OUTPUT_DIR=./data ./opendata-radar-downloader
 ```
 
 ## Configuration
 
 All configuration is via environment variables.
 
+### General
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STORED_QUERY` | `fmi::radar::composite::dbz` | FMI stored query ID |
-| `WFS_URL` | *(built from STORED_QUERY)* | Full WFS GetFeature URL (overrides STORED_QUERY for URL construction) |
+| `SOURCE` | `fmi` | Data source: `fmi` or `metno` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
+| `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
 | `ERROR_INTERVAL` | `120s` | Initial wait after a failed poll |
 | `MAX_BACKOFF` | `5m` | Maximum wait between retries on consecutive errors |
@@ -62,22 +79,48 @@ All configuration is via environment variables.
 
 Duration values use Go duration syntax (e.g., `30s`, `2m`, `1m30s`).
 
-### Example: different radar product
+### FMI-specific (SOURCE=fmi)
 
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STORED_QUERY` | `fmi::radar::composite::dbz` | FMI stored query ID |
+| `WFS_URL` | *(built from STORED_QUERY)* | Full WFS GetFeature URL |
+
+### MET Norway-specific (SOURCE=metno)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STAC_URL` | `https://radar-stacapi.met.no/v1/collections/Mosaic-Norway-v1/items` | STAC API endpoint |
+| `STAC_LIMIT` | `10` | Items per page |
+
+### Examples
+
+Different FMI radar product:
 ```bash
 docker run -d \
   -v $(pwd)/data:/data \
-  -e OUTPUT_DIR=/data \
   -e STORED_QUERY=fmi::radar::composite::rr1h \
+  ghcr.io/fmidev/opendata-radar-downloader:latest
+```
+
+MET Norway with COG re-optimization:
+```bash
+docker run -d \
+  -v $(pwd)/data:/data \
+  -e SOURCE=metno \
+  -e COG_ENABLED=true \
+  -e COG_COMPRESS=ZSTD \
   ghcr.io/fmidev/opendata-radar-downloader:latest
 ```
 
 ## Features
 
-- Polls FMI WFS endpoint and downloads new GeoTIFF files automatically
+- Multiple data sources: FMI WFS and MET Norway STAC API
 - Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
+- SHA256 checksum verification (MET Norway)
 - Atomic file writes (temp file + rename) to prevent partial files
 - Deduplication by checking existing files on disk
+- Automatic retention-based cleanup of old files
 - Retry with exponential backoff on download failures
 - Escalating backoff on consecutive poll errors (up to `MAX_BACKOFF`)
 - Graceful shutdown on SIGTERM/SIGINT
@@ -93,11 +136,12 @@ The container includes a Docker HEALTHCHECK. On each successful poll cycle, a `.
 ## Building the Docker image
 
 ```bash
-docker build -t fmi-radar-downloader .
+docker build -t opendata-radar-downloader .
 ```
 
 The CI pipeline (GitHub Actions) automatically builds and pushes to `ghcr.io/fmidev/opendata-radar-downloader` on pushes to `main` and version tags.
 
 ## License
 
-See [FMI Open Data License](https://en.ilmatieteenlaitos.fi/open-data-licence) for data usage terms.
+- FMI data: [FMI Open Data License](https://en.ilmatieteenlaitos.fi/open-data-licence)
+- MET Norway data: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)

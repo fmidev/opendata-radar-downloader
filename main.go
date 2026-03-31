@@ -23,10 +23,12 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	src := newSource(cfg)
+
 	slog.Info("starting fmi-radar-downloader",
+		"source", cfg.Source,
 		"output_dir", cfg.OutputDir,
 		"poll_interval", cfg.PollInterval,
-		"wfs_url", cfg.WFSURL,
 	)
 
 	cleanupTempFiles(cfg.OutputDir)
@@ -42,7 +44,7 @@ func main() {
 
 	// Run first poll immediately, then wait between polls
 	for {
-		nextDelay := poll(ctx, client, cfg, &consecutiveErrors)
+		nextDelay := poll(ctx, client, cfg, src, &consecutiveErrors)
 
 		select {
 		case <-ctx.Done():
@@ -53,18 +55,19 @@ func main() {
 	}
 }
 
-func poll(ctx context.Context, client *http.Client, cfg *Config, consecutiveErrors *int) time.Duration {
+func poll(ctx context.Context, client *http.Client, cfg *Config, src Source, consecutiveErrors *int) time.Duration {
 	if ctx.Err() != nil {
 		return 0
 	}
 
-	slog.Debug("fetching WFS", "url", cfg.WFSURL)
+	slog.Debug("fetching files", "source", src.Name())
 
-	members, err := FetchWFS(ctx, client, cfg.WFSURL)
+	files, err := src.FetchFiles(ctx, client)
 	if err != nil {
 		*consecutiveErrors++
 		backoff := errorBackoff(cfg.ErrorInterval, cfg.MaxBackoff, *consecutiveErrors)
-		slog.Error("wfs fetch failed",
+		slog.Error("fetch failed",
+			"source", src.Name(),
 			"error", err,
 			"consecutive_errors", *consecutiveErrors,
 			"backoff", backoff,
@@ -72,16 +75,16 @@ func poll(ctx context.Context, client *http.Client, cfg *Config, consecutiveErro
 		return backoff
 	}
 
-	slog.Debug("found members", "count", len(members))
+	slog.Debug("found files", "count", len(files))
 
 	downloadErrors := 0
-	for _, m := range members {
+	for _, rf := range files {
 		if ctx.Err() != nil {
 			return 0
 		}
-		if err := DownloadIfNew(ctx, client, m, cfg); err != nil {
+		if err := DownloadIfNew(ctx, client, rf, cfg); err != nil {
 			slog.Error("download failed",
-				"file", m.PhenomenonTime.Format("20060102150405")+"_"+cfg.FilePrefix+".tif",
+				"file", rf.Timestamp.Format("20060102150405")+"_"+cfg.FilePrefix+".tif",
 				"error", err,
 			)
 			downloadErrors++

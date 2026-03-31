@@ -11,6 +11,7 @@ import (
 )
 
 type Config struct {
+	Source        string
 	OutputDir     string
 	PollInterval  time.Duration
 	ErrorInterval time.Duration
@@ -24,26 +25,21 @@ type Config struct {
 	COGEnabled    bool
 	COGCompress   string
 	Retention     time.Duration
+	StacURL       string
+	StacLimit     int
 }
 
 func LoadConfig() (*Config, error) {
-	storedQuery := envOrDefault("STORED_QUERY", "fmi::radar::composite::dbz")
-
-	wfsURL := os.Getenv("WFS_URL")
-	if wfsURL == "" {
-		params := url.Values{}
-		params.Set("service", "WFS")
-		params.Set("version", "2.0.0")
-		params.Set("request", "GetFeature")
-		params.Set("storedquery_id", storedQuery)
-		wfsURL = "https://opendata.fmi.fi/wfs?" + params.Encode()
+	source := envOrDefault("SOURCE", "fmi")
+	switch source {
+	case "fmi", "metno":
+	default:
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi or metno", source)
 	}
 
 	cfg := &Config{
+		Source:        source,
 		OutputDir:     envOrDefault("OUTPUT_DIR", "."),
-		StoredQuery:   storedQuery,
-		WFSURL:        wfsURL,
-		FilePrefix:    strings.ReplaceAll(storedQuery, "::", "_"),
 		PollInterval:  60 * time.Second,
 		ErrorInterval: 120 * time.Second,
 		MaxBackoff:    5 * time.Minute,
@@ -53,6 +49,33 @@ func LoadConfig() (*Config, error) {
 		COGEnabled:    true,
 		COGCompress:   envOrDefault("COG_COMPRESS", "DEFLATE"),
 		Retention:     24 * time.Hour,
+	}
+
+	switch source {
+	case "fmi":
+		cfg.StoredQuery = envOrDefault("STORED_QUERY", "fmi::radar::composite::dbz")
+		cfg.WFSURL = os.Getenv("WFS_URL")
+		if cfg.WFSURL == "" {
+			params := url.Values{}
+			params.Set("service", "WFS")
+			params.Set("version", "2.0.0")
+			params.Set("request", "GetFeature")
+			params.Set("storedquery_id", cfg.StoredQuery)
+			cfg.WFSURL = "https://opendata.fmi.fi/wfs?" + params.Encode()
+		}
+		cfg.FilePrefix = envOrDefault("FILE_PREFIX", strings.ReplaceAll(cfg.StoredQuery, "::", "_"))
+
+	case "metno":
+		cfg.StacURL = envOrDefault("STAC_URL", "https://radar-stacapi.met.no/v1/collections/Mosaic-Norway-v1/items")
+		cfg.StacLimit = 10
+		if v := os.Getenv("STAC_LIMIT"); v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				return nil, fmt.Errorf("invalid STAC_LIMIT %q: %w", v, err)
+			}
+			cfg.StacLimit = n
+		}
+		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "metno_radar")
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {

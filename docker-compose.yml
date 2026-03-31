@@ -1,9 +1,20 @@
 services:
-  downloader:
+  fmi-downloader:
     image: ghcr.io/fmidev/opendata-radar-downloader:latest
     build: .
     volumes:
-      - ./data:/data
+      - ./data/fmi:/data
     environment:
+      - SOURCE=fmi
+      - OUTPUT_DIR=/data
+    restart: unless-stopped
+
+  metno-downloader:
+    image: ghcr.io/fmidev/opendata-radar-downloader:latest
+    build: .
+    volumes:
+      - ./data/metno:/data
+    environment:
+      - SOURCE=metno
       - OUTPUT_DIR=/data
     restart: unless-stopped
