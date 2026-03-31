@@ -29,7 +29,7 @@ docker run -d \
   -v $(pwd)/data:/data \
   -e OUTPUT_DIR=/data \
   --restart unless-stopped \
-  ghcr.io/fmidev/fmi-radar-downloader:latest
+  ghcr.io/fmidev/opendata-radar-downloader:latest
 ```
 
 ### Build from source
@@ -66,7 +66,7 @@ docker run -d \
   -v $(pwd)/data:/data \
   -e OUTPUT_DIR=/data \
   -e STORED_QUERY=fmi::radar::composite::rr1h \
-  ghcr.io/fmidev/fmi-radar-downloader:latest
+  ghcr.io/fmidev/opendata-radar-downloader:latest
 ```
 
 ## Features
@@ -92,7 +92,7 @@ The container includes a Docker HEALTHCHECK. On each successful poll cycle, a `.
 docker build -t fmi-radar-downloader .
 ```
 
-The CI pipeline (GitHub Actions) automatically builds and pushes to `ghcr.io/fmidev/fmi-radar-downloader` on pushes to `main` and version tags.
+The CI pipeline (GitHub Actions) automatically builds and pushes to `ghcr.io/fmidev/opendata-radar-downloader` on pushes to `main` and version tags.
 
 ## License
 

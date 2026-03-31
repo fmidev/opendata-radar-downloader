@@ -1,6 +1,6 @@
 services:
   downloader:
-    image: ghcr.io/fmidev/fmi-radar-downloader:latest
+    image: ghcr.io/fmidev/opendata-radar-downloader:latest
     build: .
     volumes:
       - ./data:/data
