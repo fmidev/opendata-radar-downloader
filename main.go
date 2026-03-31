@@ -29,6 +29,8 @@ func main() {
 		"wfs_url", cfg.WFSURL,
 	)
 
+	cleanupTempFiles(cfg.OutputDir)
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
@@ -111,4 +113,31 @@ func writeHealthFile(outputDir string) {
 	healthPath := filepath.Join(outputDir, ".last_successful_poll")
 	ts := time.Now().UTC().Format(time.RFC3339)
 	os.WriteFile(healthPath, []byte(ts+"\n"), 0o644)
+}
+
+func cleanupTempFiles(outputDir string) {
+	patterns := []string{
+		filepath.Join(outputDir, ".download-*.tmp"),
+		filepath.Join(outputDir, "*.cog.tmp"),
+		filepath.Join(outputDir, "*.raw"),
+	}
+
+	removed := 0
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			continue
+		}
+		for _, f := range matches {
+			if err := os.Remove(f); err != nil {
+				slog.Warn("failed to remove temp file", "file", f, "error", err)
+			} else {
+				removed++
+			}
+		}
+	}
+
+	if removed > 0 {
+		slog.Info("cleaned up stale temp files", "count", removed)
+	}
 }

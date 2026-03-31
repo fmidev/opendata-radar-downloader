@@ -88,6 +88,10 @@ func convertToCOG(ctx context.Context, srcPath, destPath, compress string) error
 	cmd := exec.CommandContext(ctx, "gdal_translate",
 		"-of", "COG",
 		"-co", "COMPRESS="+compress,
+		"-co", "PREDICTOR=YES",
+		"-co", "BLOCKSIZE=256",
+		"-co", "OVERVIEW_RESAMPLING=AVERAGE",
+		"-co", "OVERVIEWS=AUTO",
 		srcPath, tmpPath,
 	)
 	cmd.Stderr = os.Stderr
