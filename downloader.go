@@ -111,13 +111,15 @@ func convertToCOG(ctx context.Context, srcPath, destPath, compress string) error
 		return fmt.Errorf("renaming COG file: %w", err)
 	}
 
-	info, _ := os.Stat(destPath)
 	duration := time.Since(start)
-	slog.Info("COG conversion complete",
+	attrs := []any{
 		"file", filepath.Base(destPath),
-		"size", info.Size(),
 		"duration", duration.Round(time.Millisecond),
-	)
+	}
+	if info, err := os.Stat(destPath); err == nil {
+		attrs = append(attrs, "size", info.Size())
+	}
+	slog.Info("COG conversion complete", attrs...)
 
 	return nil
 }

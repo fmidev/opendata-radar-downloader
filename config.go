@@ -23,6 +23,7 @@ type Config struct {
 	LogLevel      slog.Level
 	COGEnabled    bool
 	COGCompress   string
+	Retention     time.Duration
 }
 
 func LoadConfig() (*Config, error) {
@@ -51,6 +52,7 @@ func LoadConfig() (*Config, error) {
 		LogLevel:      slog.LevelInfo,
 		COGEnabled:    true,
 		COGCompress:   envOrDefault("COG_COMPRESS", "DEFLATE"),
+		Retention:     24 * time.Hour,
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {
@@ -61,6 +63,18 @@ func LoadConfig() (*Config, error) {
 			cfg.COGEnabled = false
 		default:
 			return nil, fmt.Errorf("invalid COG_ENABLED %q: must be true or false", v)
+		}
+	}
+
+	if v := os.Getenv("RETENTION"); v != "" {
+		if v == "0" || v == "none" {
+			cfg.Retention = 0
+		} else {
+			d, err := time.ParseDuration(v)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RETENTION %q: %w", v, err)
+			}
+			cfg.Retention = d
 		}
 	}
 

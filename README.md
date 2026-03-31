@@ -58,6 +58,7 @@ All configuration is via environment variables.
 | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
 | `COG_ENABLED` | `true` | Convert downloads to Cloud Optimized GeoTIFF |
 | `COG_COMPRESS` | `DEFLATE` | COG compression: `DEFLATE`, `LZW`, `ZSTD`, `NONE` |
+| `RETENTION` | `24h` | Delete files older than this duration. Set to `0` or `none` to disable |
 
 Duration values use Go duration syntax (e.g., `30s`, `2m`, `1m30s`).
 

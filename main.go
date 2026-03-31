@@ -91,6 +91,9 @@ func poll(ctx context.Context, client *http.Client, cfg *Config, consecutiveErro
 	if downloadErrors == 0 {
 		*consecutiveErrors = 0
 		writeHealthFile(cfg.OutputDir)
+		if cfg.Retention > 0 {
+			purgeOldFiles(cfg.OutputDir, cfg.Retention)
+		}
 	} else {
 		*consecutiveErrors++
 	}
@@ -113,6 +116,39 @@ func writeHealthFile(outputDir string) {
 	healthPath := filepath.Join(outputDir, ".last_successful_poll")
 	ts := time.Now().UTC().Format(time.RFC3339)
 	os.WriteFile(healthPath, []byte(ts+"\n"), 0o644)
+}
+
+func purgeOldFiles(outputDir string, retention time.Duration) {
+	cutoff := time.Now().Add(-retention)
+
+	entries, err := os.ReadDir(outputDir)
+	if err != nil {
+		slog.Warn("failed to read output directory for purge", "error", err)
+		return
+	}
+
+	removed := 0
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".tif" {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().Before(cutoff) {
+			path := filepath.Join(outputDir, e.Name())
+			if err := os.Remove(path); err != nil {
+				slog.Warn("failed to remove old file", "file", e.Name(), "error", err)
+			} else {
+				removed++
+			}
+		}
+	}
+
+	if removed > 0 {
+		slog.Info("purged old files", "count", removed, "retention", retention)
+	}
 }
 
 func cleanupTempFiles(outputDir string) {
