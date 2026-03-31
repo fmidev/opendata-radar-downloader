@@ -1,0 +1,5 @@
+fmi-radar-downloader
+test
+*.tif
+data/
+.last_successful_poll

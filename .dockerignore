@@ -1,0 +1,7 @@
+.git
+.github
+.claude
+*.tif
+data/
+fmi-radar-downloader
+.last_successful_poll

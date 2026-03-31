@@ -1,0 +1,9 @@
+services:
+  downloader:
+    image: ghcr.io/fmidev/fmi-radar-downloader:latest
+    build: .
+    volumes:
+      - ./data:/data
+    environment:
+      - OUTPUT_DIR=/data
+    restart: unless-stopped
