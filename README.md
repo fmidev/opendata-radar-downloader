@@ -34,7 +34,7 @@ docker run -d \
   -v $(pwd)/data:/data \
   -e OUTPUT_DIR=/data \
   --restart unless-stopped \
-  ghcr.io/fmidev/opendata-radar-downloader:latest
+  ghcr.io/fmidev/opendata-radar-downloader:main
 ```
 
 MET Norway:
@@ -44,7 +44,7 @@ docker run -d \
   -e SOURCE=metno \
   -e OUTPUT_DIR=/data \
   --restart unless-stopped \
-  ghcr.io/fmidev/opendata-radar-downloader:latest
+  ghcr.io/fmidev/opendata-radar-downloader:main
 ```
 
 ### Build from source
@@ -100,7 +100,7 @@ Different FMI radar product:
 docker run -d \
   -v $(pwd)/data:/data \
   -e STORED_QUERY=fmi::radar::composite::rr1h \
-  ghcr.io/fmidev/opendata-radar-downloader:latest
+  ghcr.io/fmidev/opendata-radar-downloader:main
 ```
 
 MET Norway with COG re-optimization:
@@ -110,7 +110,7 @@ docker run -d \
   -e SOURCE=metno \
   -e COG_ENABLED=true \
   -e COG_COMPRESS=ZSTD \
-  ghcr.io/fmidev/opendata-radar-downloader:latest
+  ghcr.io/fmidev/opendata-radar-downloader:main
 ```
 
 ## Features
