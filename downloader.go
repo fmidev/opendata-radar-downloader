@@ -92,6 +92,11 @@ func downloadFile(ctx context.Context, client *http.Client, url, destPath string
 		return fmt.Errorf("writing file: %w", err)
 	}
 
+	if err := os.Chmod(tmpPath, 0o644); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("setting file permissions: %w", err)
+	}
+
 	if err := os.Rename(tmpPath, destPath); err != nil {
 		os.Remove(tmpPath)
 		return fmt.Errorf("renaming temp file: %w", err)
