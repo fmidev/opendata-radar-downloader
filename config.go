@@ -27,14 +27,15 @@ type Config struct {
 	Retention     time.Duration
 	StacURL       string
 	StacLimit     int
+	SmhiURL       string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "metno":
+	case "fmi", "metno", "smhi":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi or metno", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, or smhi", source)
 	}
 
 	cfg := &Config{
@@ -76,6 +77,10 @@ func LoadConfig() (*Config, error) {
 			cfg.StacLimit = n
 		}
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "metno_radar")
+
+	case "smhi":
+		cfg.SmhiURL = envOrDefault("SMHI_URL", "https://opendata-download-radar.smhi.se/api/version/latest/area/sweden/product/comp")
+		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "smhi_radar")
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {

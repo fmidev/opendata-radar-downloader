@@ -4,6 +4,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 
 - **FMI Open Data** (Finnish Meteorological Institute) — WFS endpoint
 - **MET Norway** (Norwegian Meteorological Institute) — STAC API
+- **SMHI** (Swedish Meteorological and Hydrological Institute) — Open Data API
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -14,6 +15,7 @@ Files are named with the observation timestamp and source prefix:
 ```
 20260331084500_fmi_radar_composite_dbz.tif
 20260331084500_metno_radar.tif
+20260331084500_smhi_radar.tif
 ```
 
 ## Quick start
@@ -64,7 +66,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi` or `metno` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, or `smhi` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -93,6 +95,12 @@ Duration values use Go duration syntax (e.g., `30s`, `2m`, `1m30s`).
 | `STAC_URL` | `https://radar-stacapi.met.no/v1/collections/Mosaic-Norway-v1/items` | STAC API endpoint |
 | `STAC_LIMIT` | `10` | Items per page |
 
+### SMHI-specific (SOURCE=smhi)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SMHI_URL` | `https://opendata-download-radar.smhi.se/api/version/latest/area/sweden/product/comp` | SMHI API base URL |
+
 ### Examples
 
 Different FMI radar product:
@@ -115,7 +123,7 @@ docker run -d \
 
 ## Features
 
-- Multiple data sources: FMI WFS and MET Norway STAC API
+- Multiple data sources: FMI WFS, MET Norway STAC API, and SMHI Open Data
 - Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
 - SHA256 checksum verification (MET Norway)
 - Atomic file writes (temp file + rename) to prevent partial files
@@ -145,3 +153,4 @@ The CI pipeline (GitHub Actions) automatically builds and pushes to `ghcr.io/fmi
 
 - FMI data: [FMI Open Data License](https://en.ilmatieteenlaitos.fi/open-data-licence)
 - MET Norway data: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
+- SMHI data: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)

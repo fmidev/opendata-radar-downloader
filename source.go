@@ -25,6 +25,8 @@ func newSource(cfg *Config) Source {
 	switch cfg.Source {
 	case "metno":
 		return &MetNoSource{URL: cfg.StacURL, Limit: cfg.StacLimit}
+	case "smhi":
+		return &SMHISource{BaseURL: cfg.SmhiURL}
 	default:
 		return &FMISource{URL: cfg.WFSURL, Prefix: cfg.FilePrefix}
 	}

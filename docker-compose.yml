@@ -18,3 +18,13 @@ services:
       - SOURCE=metno
       - OUTPUT_DIR=/data
     restart: unless-stopped
+
+  smhi-downloader:
+    image: ghcr.io/fmidev/opendata-radar-downloader:main
+    build: .
+    volumes:
+      - ./data/smhi:/data
+    environment:
+      - SOURCE=smhi
+      - OUTPUT_DIR=/data
+    restart: unless-stopped
