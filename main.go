@@ -157,6 +157,7 @@ func purgeOldFiles(outputDir string, retention time.Duration) {
 func cleanupTempFiles(outputDir string) {
 	patterns := []string{
 		filepath.Join(outputDir, ".download-*.tmp"),
+		filepath.Join(outputDir, "*.gdal.tmp"),
 		filepath.Join(outputDir, "*.cog.tmp"),
 		filepath.Join(outputDir, "*.raw"),
 	}

@@ -24,6 +24,7 @@ type Config struct {
 	LogLevel      slog.Level
 	COGEnabled    bool
 	COGCompress   string
+	TargetEPSG    string
 	Retention     time.Duration
 	StacURL       string
 	StacLimit     int
@@ -49,6 +50,7 @@ func LoadConfig() (*Config, error) {
 		LogLevel:      slog.LevelInfo,
 		COGEnabled:    true,
 		COGCompress:   envOrDefault("COG_COMPRESS", "DEFLATE"),
+		TargetEPSG:    os.Getenv("TARGET_EPSG"),
 		Retention:     24 * time.Hour,
 	}
 

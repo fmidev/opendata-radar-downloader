@@ -76,9 +76,10 @@ func DownloadIfNew(ctx context.Context, client *http.Client, rf RadarFile, cfg *
 		}
 	}
 
-	if cfg.COGEnabled {
-		if err := convertToCOG(ctx, downloadPath, filePath, cfg.COGCompress); err != nil {
-			slog.Error("COG conversion failed, keeping raw file",
+	needsProcessing := cfg.COGEnabled || cfg.TargetEPSG != ""
+	if needsProcessing {
+		if err := processGDAL(ctx, downloadPath, filePath, cfg); err != nil {
+			slog.Error("GDAL processing failed, keeping raw file",
 				"file", fileName,
 				"raw", downloadPath,
 				"error", err,
@@ -123,34 +124,53 @@ func verifyChecksum(filePath, expected string) error {
 	return nil
 }
 
-func convertToCOG(ctx context.Context, srcPath, destPath, compress string) error {
+func processGDAL(ctx context.Context, srcPath, destPath string, cfg *Config) error {
 	start := time.Now()
+	tmpPath := destPath + ".gdal.tmp"
 
-	tmpPath := destPath + ".cog.tmp"
-	cmd := exec.CommandContext(ctx, "gdal_translate",
-		"-of", "COG",
-		"-co", "COMPRESS="+compress,
-		"-co", "PREDICTOR=YES",
-		"-co", "BLOCKSIZE=256",
-		"-co", "OVERVIEW_RESAMPLING=AVERAGE",
-		"-co", "OVERVIEWS=AUTO",
-		srcPath, tmpPath,
-	)
+	// Use gdalwarp when reprojecting (can also output COG directly),
+	// otherwise use gdal_translate for COG-only conversion.
+	var cmd *exec.Cmd
+	if cfg.TargetEPSG != "" {
+		args := []string{"-t_srs", "EPSG:" + cfg.TargetEPSG}
+		if cfg.COGEnabled {
+			args = append(args,
+				"-of", "COG",
+				"-co", "COMPRESS="+cfg.COGCompress,
+				"-co", "PREDICTOR=YES",
+				"-co", "BLOCKSIZE=256",
+				"-co", "OVERVIEW_RESAMPLING=AVERAGE",
+				"-co", "OVERVIEWS=AUTO",
+			)
+		}
+		args = append(args, srcPath, tmpPath)
+		cmd = exec.CommandContext(ctx, "gdalwarp", args...)
+	} else {
+		cmd = exec.CommandContext(ctx, "gdal_translate",
+			"-of", "COG",
+			"-co", "COMPRESS="+cfg.COGCompress,
+			"-co", "PREDICTOR=YES",
+			"-co", "BLOCKSIZE=256",
+			"-co", "OVERVIEW_RESAMPLING=AVERAGE",
+			"-co", "OVERVIEWS=AUTO",
+			srcPath, tmpPath,
+		)
+	}
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		os.Remove(tmpPath)
-		return fmt.Errorf("gdal_translate: %w", err)
+		return fmt.Errorf("gdal processing: %w", err)
 	}
 
 	if err := os.Chmod(tmpPath, 0o644); err != nil {
 		os.Remove(tmpPath)
-		return fmt.Errorf("setting COG file permissions: %w", err)
+		return fmt.Errorf("setting file permissions: %w", err)
 	}
 
 	if err := os.Rename(tmpPath, destPath); err != nil {
 		os.Remove(tmpPath)
-		return fmt.Errorf("renaming COG file: %w", err)
+		return fmt.Errorf("renaming output file: %w", err)
 	}
 
 	duration := time.Since(start)
@@ -161,7 +181,7 @@ func convertToCOG(ctx context.Context, srcPath, destPath, compress string) error
 	if info, err := os.Stat(destPath); err == nil {
 		attrs = append(attrs, "size", info.Size())
 	}
-	slog.Info("COG conversion complete", attrs...)
+	slog.Info("GDAL processing complete", attrs...)
 
 	return nil
 }
