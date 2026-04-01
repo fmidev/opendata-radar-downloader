@@ -140,33 +140,43 @@ func processGDAL(ctx context.Context, srcPath, destPath string, cfg *Config) err
 	var cmd *exec.Cmd
 	if cfg.TargetEPSG != "" {
 		args := []string{"-t_srs", "EPSG:" + cfg.TargetEPSG}
+		if cfg.Nodata != "" {
+			args = append(args, "-srcnodata", cfg.Nodata, "-dstnodata", cfg.Nodata)
+		}
 		if cfg.COGEnabled {
 			args = append(args,
 				"-of", "COG",
 				"-co", "COMPRESS="+cfg.COGCompress,
 				"-co", "PREDICTOR=YES",
 				"-co", "BLOCKSIZE=256",
-				"-co", "OVERVIEW_RESAMPLING=AVERAGE",
+				"-co", "OVERVIEW_RESAMPLING=NEAREST",
 				"-co", "OVERVIEWS=AUTO",
 			)
 		}
 		args = append(args, gdalSrc, tmpPath)
 		cmd = exec.CommandContext(ctx, "gdalwarp", args...)
 	} else if cfg.COGEnabled {
-		cmd = exec.CommandContext(ctx, "gdal_translate",
+		args := []string{
 			"-of", "COG",
-			"-co", "COMPRESS="+cfg.COGCompress,
+			"-co", "COMPRESS=" + cfg.COGCompress,
 			"-co", "PREDICTOR=YES",
 			"-co", "BLOCKSIZE=256",
-			"-co", "OVERVIEW_RESAMPLING=AVERAGE",
+			"-co", "OVERVIEW_RESAMPLING=NEAREST",
 			"-co", "OVERVIEWS=AUTO",
-			gdalSrc, tmpPath,
-		)
+		}
+		if cfg.Nodata != "" {
+			args = append(args, "-a_nodata", cfg.Nodata)
+		}
+		args = append(args, gdalSrc, tmpPath)
+		cmd = exec.CommandContext(ctx, "gdal_translate", args...)
 	} else {
+		args := []string{}
+		if cfg.Nodata != "" {
+			args = append(args, "-a_nodata", cfg.Nodata)
+		}
+		args = append(args, gdalSrc, tmpPath)
 		// Format conversion only (e.g., HDF5 to GeoTIFF)
-		cmd = exec.CommandContext(ctx, "gdal_translate",
-			gdalSrc, tmpPath,
-		)
+		cmd = exec.CommandContext(ctx, "gdal_translate", args...)
 	}
 	cmd.Stderr = os.Stderr
 

@@ -25,6 +25,7 @@ type Config struct {
 	COGEnabled    bool
 	COGCompress   string
 	TargetEPSG    string
+	Nodata        string
 	Retention     time.Duration
 	StacURL       string
 	StacLimit     int
@@ -52,6 +53,7 @@ func LoadConfig() (*Config, error) {
 		COGEnabled:    true,
 		COGCompress:   envOrDefault("COG_COMPRESS", "DEFLATE"),
 		TargetEPSG:    os.Getenv("TARGET_EPSG"),
+		Nodata:        os.Getenv("NODATA"),
 		Retention:     24 * time.Hour,
 	}
 

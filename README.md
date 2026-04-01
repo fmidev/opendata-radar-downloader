@@ -77,6 +77,7 @@ All configuration is via environment variables.
 | `HTTP_TIMEOUT` | `60s` | HTTP client timeout |
 | `MAX_RETRIES` | `3` | Max download retry attempts per file |
 | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `NODATA` | *(none)* | Set nodata value, e.g. `255` |
 | `TARGET_EPSG` | *(none)* | Reproject to target CRS, e.g. `4326` for WGS84 |
 | `COG_ENABLED` | `true` | Convert downloads to Cloud Optimized GeoTIFF |
 | `COG_COMPRESS` | `DEFLATE` | COG compression: `DEFLATE`, `LZW`, `ZSTD`, `NONE` |
