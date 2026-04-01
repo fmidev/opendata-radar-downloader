@@ -7,7 +7,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o fmi-radar-downloader .
 
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates gdal-tools \
+RUN apk add --no-cache ca-certificates gdal-tools gdal-driver-hdf5 \
     && adduser -D -h /data appuser
 
 COPY --from=builder /build/fmi-radar-downloader /usr/local/bin/
