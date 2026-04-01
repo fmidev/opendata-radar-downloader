@@ -16,7 +16,17 @@ type DMISource struct {
 func (s *DMISource) Name() string { return "dmi_radar" }
 
 func (s *DMISource) FetchFiles(ctx context.Context, client *http.Client) ([]RadarFile, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.URL, nil)
+	now := time.Now().UTC()
+	cutoff := now.Add(-1 * time.Hour)
+
+	// DMI API requires datetime filter to return recent data
+	url := fmt.Sprintf("%s?datetime=%s/%s",
+		s.URL,
+		cutoff.Format(time.RFC3339),
+		now.Format(time.RFC3339),
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -36,16 +46,10 @@ func (s *DMISource) FetchFiles(ctx context.Context, client *http.Client) ([]Rada
 		return nil, fmt.Errorf("decoding JSON: %w", err)
 	}
 
-	cutoff := time.Now().Add(-1 * time.Hour)
-
 	var files []RadarFile
 	for _, f := range fc.Features {
 		t, err := time.Parse(time.RFC3339, f.Properties.Datetime)
 		if err != nil {
-			continue
-		}
-
-		if t.Before(cutoff) {
 			continue
 		}
 
