@@ -17,6 +17,7 @@ VOLUME /data
 
 USER appuser
 ENV OUTPUT_DIR=/data
+ENV HDF5_DISABLE_VERSION_CHECK=1
 
 HEALTHCHECK --interval=5m --timeout=5s --start-period=2m --retries=3 \
     CMD test -f /data/.last_successful_poll && \
