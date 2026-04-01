@@ -160,6 +160,7 @@ func cleanupTempFiles(outputDir string) {
 		filepath.Join(outputDir, "*.gdal.tmp"),
 		filepath.Join(outputDir, "*.cog.tmp"),
 		filepath.Join(outputDir, "*.raw"),
+		filepath.Join(outputDir, "*.h5"),
 	}
 
 	removed := 0

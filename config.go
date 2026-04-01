@@ -29,14 +29,15 @@ type Config struct {
 	StacURL       string
 	StacLimit     int
 	SmhiURL       string
+	DmiURL        string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "metno", "smhi":
+	case "fmi", "metno", "smhi", "dmi":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, or smhi", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, smhi, or dmi", source)
 	}
 
 	cfg := &Config{
@@ -83,6 +84,10 @@ func LoadConfig() (*Config, error) {
 	case "smhi":
 		cfg.SmhiURL = envOrDefault("SMHI_URL", "https://opendata-download-radar.smhi.se/api/version/latest/area/sweden/product/comp")
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "smhi_radar")
+
+	case "dmi":
+		cfg.DmiURL = envOrDefault("DMI_URL", "https://opendataapi.dmi.dk/v1/radardata/collections/composite/items")
+		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "dmi_radar")
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {

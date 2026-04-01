@@ -26,10 +26,17 @@ func DownloadIfNew(ctx context.Context, client *http.Client, rf RadarFile, cfg *
 		return nil
 	}
 
-	// When COG is enabled, download to a raw file first, then convert
+	// Determine if we need GDAL processing
+	isHDF5 := strings.HasSuffix(rf.DownloadURL, ".h5") || strings.HasSuffix(rf.DownloadURL, ".hdf5")
+	needsProcessing := cfg.COGEnabled || cfg.TargetEPSG != "" || isHDF5
+
 	downloadPath := filePath
-	if cfg.COGEnabled {
-		downloadPath = filePath + ".raw"
+	if needsProcessing {
+		ext := ".raw"
+		if isHDF5 {
+			ext = ".h5"
+		}
+		downloadPath = filePath + ext
 	}
 
 	var lastErr error
@@ -76,7 +83,6 @@ func DownloadIfNew(ctx context.Context, client *http.Client, rf RadarFile, cfg *
 		}
 	}
 
-	needsProcessing := cfg.COGEnabled || cfg.TargetEPSG != ""
 	if needsProcessing {
 		if err := processGDAL(ctx, downloadPath, filePath, cfg); err != nil {
 			slog.Error("GDAL processing failed, keeping raw file",
@@ -129,7 +135,8 @@ func processGDAL(ctx context.Context, srcPath, destPath string, cfg *Config) err
 	tmpPath := destPath + ".gdal.tmp"
 
 	// Use gdalwarp when reprojecting (can also output COG directly),
-	// otherwise use gdal_translate for COG-only conversion.
+	// otherwise use gdal_translate for COG/format conversion.
+	gdalSrc := srcPath
 	var cmd *exec.Cmd
 	if cfg.TargetEPSG != "" {
 		args := []string{"-t_srs", "EPSG:" + cfg.TargetEPSG}
@@ -143,9 +150,9 @@ func processGDAL(ctx context.Context, srcPath, destPath string, cfg *Config) err
 				"-co", "OVERVIEWS=AUTO",
 			)
 		}
-		args = append(args, srcPath, tmpPath)
+		args = append(args, gdalSrc, tmpPath)
 		cmd = exec.CommandContext(ctx, "gdalwarp", args...)
-	} else {
+	} else if cfg.COGEnabled {
 		cmd = exec.CommandContext(ctx, "gdal_translate",
 			"-of", "COG",
 			"-co", "COMPRESS="+cfg.COGCompress,
@@ -153,7 +160,12 @@ func processGDAL(ctx context.Context, srcPath, destPath string, cfg *Config) err
 			"-co", "BLOCKSIZE=256",
 			"-co", "OVERVIEW_RESAMPLING=AVERAGE",
 			"-co", "OVERVIEWS=AUTO",
-			srcPath, tmpPath,
+			gdalSrc, tmpPath,
+		)
+	} else {
+		// Format conversion only (e.g., HDF5 to GeoTIFF)
+		cmd = exec.CommandContext(ctx, "gdal_translate",
+			gdalSrc, tmpPath,
 		)
 	}
 	cmd.Stderr = os.Stderr

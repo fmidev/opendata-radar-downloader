@@ -28,3 +28,13 @@ services:
       - SOURCE=smhi
       - OUTPUT_DIR=/data
     restart: unless-stopped
+
+  dmi-downloader:
+    image: ghcr.io/fmidev/opendata-radar-downloader:main
+    build: .
+    volumes:
+      - ./data/dmi:/data
+    environment:
+      - SOURCE=dmi
+      - OUTPUT_DIR=/data
+    restart: unless-stopped

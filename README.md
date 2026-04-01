@@ -5,6 +5,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 - **FMI Open Data** (Finnish Meteorological Institute) — WFS endpoint
 - **MET Norway** (Norwegian Meteorological Institute) — STAC API
 - **SMHI** (Swedish Meteorological and Hydrological Institute) — Open Data API
+- **DMI** (Danish Meteorological Institute) — STAC API (HDF5 ODIM format, auto-converted to GeoTIFF)
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -16,6 +17,7 @@ Files are named with the observation timestamp and source prefix:
 20260331084500_fmi_radar_composite_dbz.tif
 20260331084500_metno_radar.tif
 20260331084500_smhi_radar.tif
+20260331084500_dmi_radar.tif
 ```
 
 ## Quick start
@@ -66,7 +68,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, or `smhi` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, `smhi`, or `dmi` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -102,6 +104,12 @@ Duration values use Go duration syntax (e.g., `30s`, `2m`, `1m30s`).
 |----------|---------|-------------|
 | `SMHI_URL` | `https://opendata-download-radar.smhi.se/api/version/latest/area/sweden/product/comp` | SMHI API base URL |
 
+### DMI-specific (SOURCE=dmi)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DMI_URL` | `https://opendataapi.dmi.dk/v1/radardata/collections/composite/items` | DMI STAC API endpoint |
+
 ### Examples
 
 Different FMI radar product:
@@ -124,7 +132,7 @@ docker run -d \
 
 ## Features
 
-- Multiple data sources: FMI WFS, MET Norway STAC API, and SMHI Open Data
+- Multiple data sources: FMI WFS, MET Norway STAC API, SMHI Open Data, and DMI STAC API
 - Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
 - SHA256 checksum verification (MET Norway)
 - Atomic file writes (temp file + rename) to prevent partial files
@@ -155,3 +163,4 @@ The CI pipeline (GitHub Actions) automatically builds and pushes to `ghcr.io/fmi
 - FMI data: [FMI Open Data License](https://en.ilmatieteenlaitos.fi/open-data-licence)
 - MET Norway data: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 - SMHI data: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
+- DMI data: [DMI Open Data](https://opendatadocs.dmi.govcloud.dk/)
