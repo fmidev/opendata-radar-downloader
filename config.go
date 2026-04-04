@@ -129,6 +129,9 @@ func LoadConfig() (*Config, error) {
 	case "dwd":
 		cfg.DwdURL = envOrDefault("DWD_URL", "https://opendata.dwd.de/weather/radar/composite/hx/")
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "dwd_radar")
+		if cfg.Nodata == "" {
+			cfg.Nodata = "65535"
+		}
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {
