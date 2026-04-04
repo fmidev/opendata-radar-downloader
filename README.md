@@ -6,6 +6,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 - **MET Norway** (Norwegian Meteorological Institute) — STAC API
 - **SMHI** (Swedish Meteorological and Hydrological Institute) — Open Data API
 - **DMI** (Danish Meteorological Institute) — STAC API (HDF5 ODIM format, auto-converted to GeoTIFF)
+- **KAIA** (Estonian Environment Agency) — REST API (HDF5 ODIM format, auto-converted to GeoTIFF)
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -18,6 +19,8 @@ Files are named with the observation timestamp and source prefix:
 20260331084500_metno_radar.tif
 20260331084500_smhi_radar.tif
 20260331084500_dmi_radar.tif
+20260331084500_ee_radar.tif
+20260331084500_ee_radar_eehar.tif
 ```
 
 ## Quick start
@@ -68,7 +71,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, `smhi`, or `dmi` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, `smhi`, `dmi`, or `ee` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -111,6 +114,16 @@ Duration values use Go duration syntax (e.g., `30s`, `2m`, `1m30s`).
 |----------|---------|-------------|
 | `DMI_URL` | `https://opendataapi.dmi.dk/v1/radardata/collections/composite/items` | DMI STAC API endpoint |
 
+### Estonian-specific (SOURCE=ee)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EE_URL` | `https://avaandmed.keskkonnaportaal.ee/api/lists/active/items/query` | Estonian Environment Agency API endpoint |
+| `RADAR_OBJECT` | `COMP` | `COMP` for composite, `SCAN` for individual radar |
+| `RADAR_NODE` | *(none)* | OPERA node code for individual radar. Required when `RADAR_OBJECT=SCAN` |
+
+Available radar nodes: `eehar` (Harku), `eesur` (Sürgavere).
+
 ### Examples
 
 Different FMI radar product:
@@ -118,6 +131,26 @@ Different FMI radar product:
 docker run -d \
   -v $(pwd)/data:/data \
   -e STORED_QUERY=fmi::radar::composite::rr1h \
+  ghcr.io/fmidev/opendata-radar-downloader:main
+```
+
+Estonian composite:
+```bash
+docker run -d \
+  -v $(pwd)/data:/data \
+  -e SOURCE=ee \
+  -e OUTPUT_DIR=/data \
+  ghcr.io/fmidev/opendata-radar-downloader:main
+```
+
+Estonian individual radar (Harku):
+```bash
+docker run -d \
+  -v $(pwd)/data:/data \
+  -e SOURCE=ee \
+  -e RADAR_OBJECT=SCAN \
+  -e RADAR_NODE=eehar \
+  -e OUTPUT_DIR=/data \
   ghcr.io/fmidev/opendata-radar-downloader:main
 ```
 
@@ -133,7 +166,7 @@ docker run -d \
 
 ## Features
 
-- Multiple data sources: FMI WFS, MET Norway STAC API, SMHI Open Data, and DMI STAC API
+- Multiple data sources: FMI WFS, MET Norway STAC API, SMHI Open Data, DMI STAC API, and Estonian KAIA API
 - Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
 - SHA256 checksum verification (MET Norway)
 - Atomic file writes (temp file + rename) to prevent partial files
@@ -165,3 +198,4 @@ The CI pipeline (GitHub Actions) automatically builds and pushes to `ghcr.io/fmi
 - MET Norway data: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 - SMHI data: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 - DMI data: [DMI Open Data](https://opendatadocs.dmi.govcloud.dk/)
+- Estonian data: [Estonian Environment Agency Open Data](https://avaandmed.keskkonnaportaal.ee/)

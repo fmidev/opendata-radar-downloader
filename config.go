@@ -31,14 +31,17 @@ type Config struct {
 	StacLimit     int
 	SmhiURL       string
 	DmiURL        string
+	EeURL         string
+	RadarObject   string
+	RadarNode     string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "metno", "smhi", "dmi":
+	case "fmi", "metno", "smhi", "dmi", "ee":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, smhi, or dmi", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, smhi, dmi, or ee", source)
 	}
 
 	cfg := &Config{
@@ -90,6 +93,37 @@ func LoadConfig() (*Config, error) {
 	case "dmi":
 		cfg.DmiURL = envOrDefault("DMI_URL", "https://opendataapi.dmi.dk/v1/radardata/collections/composite/items")
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "dmi_radar")
+
+	case "ee":
+		cfg.EeURL = envOrDefault("EE_URL", "https://avaandmed.keskkonnaportaal.ee/api/lists/active/items/query")
+		cfg.RadarObject = envOrDefault("RADAR_OBJECT", "COMP")
+		cfg.RadarNode = os.Getenv("RADAR_NODE")
+
+		switch cfg.RadarObject {
+		case "COMP", "SCAN":
+		default:
+			return nil, fmt.Errorf("invalid RADAR_OBJECT %q: must be COMP or SCAN", cfg.RadarObject)
+		}
+
+		if cfg.RadarObject != "COMP" && cfg.RadarNode == "" {
+			return nil, fmt.Errorf("RADAR_NODE is required when RADAR_OBJECT is %q", cfg.RadarObject)
+		}
+
+		if cfg.RadarNode != "" {
+			if _, ok := eeNodeToRadar[cfg.RadarNode]; !ok {
+				known := make([]string, 0, len(eeNodeToRadar))
+				for k := range eeNodeToRadar {
+					known = append(known, k)
+				}
+				return nil, fmt.Errorf("unknown RADAR_NODE %q for Estonian source; known nodes: %s", cfg.RadarNode, strings.Join(known, ", "))
+			}
+		}
+
+		prefix := "ee_radar"
+		if cfg.RadarNode != "" {
+			prefix = "ee_radar_" + cfg.RadarNode
+		}
+		cfg.FilePrefix = envOrDefault("FILE_PREFIX", prefix)
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {

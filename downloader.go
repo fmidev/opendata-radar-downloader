@@ -27,7 +27,7 @@ func DownloadIfNew(ctx context.Context, client *http.Client, rf RadarFile, cfg *
 	}
 
 	// Determine if we need GDAL processing
-	isHDF5 := strings.HasSuffix(rf.DownloadURL, ".h5") || strings.HasSuffix(rf.DownloadURL, ".hdf5")
+	isHDF5 := rf.IsHDF5 || strings.HasSuffix(rf.DownloadURL, ".h5") || strings.HasSuffix(rf.DownloadURL, ".hdf5")
 	needsProcessing := cfg.COGEnabled || cfg.TargetEPSG != "" || isHDF5
 
 	downloadPath := filePath

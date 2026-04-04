@@ -11,6 +11,7 @@ type RadarFile struct {
 	Timestamp   time.Time
 	DownloadURL string
 	Checksum    string // optional, e.g. "multihash-sha256:abc..." from MET Norway
+	IsHDF5      bool   // true when the source knows the file is HDF5 (used when URL has no extension)
 }
 
 // Source fetches the list of currently available radar files from a provider.
@@ -29,6 +30,12 @@ func newSource(cfg *Config) Source {
 		return &SMHISource{BaseURL: cfg.SmhiURL}
 	case "dmi":
 		return &DMISource{URL: cfg.DmiURL}
+	case "ee":
+		return &EESource{
+			URL:         cfg.EeURL,
+			RadarObject: cfg.RadarObject,
+			RadarNode:   cfg.RadarNode,
+		}
 	default:
 		return &FMISource{URL: cfg.WFSURL, Prefix: cfg.FilePrefix}
 	}
