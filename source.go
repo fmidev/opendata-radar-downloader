@@ -36,6 +36,8 @@ func newSource(cfg *Config) Source {
 			RadarObject: cfg.RadarObject,
 			RadarNode:   cfg.RadarNode,
 		}
+	case "dwd":
+		return &DWDSource{URL: cfg.DwdURL}
 	default:
 		return &FMISource{URL: cfg.WFSURL, Prefix: cfg.FilePrefix}
 	}

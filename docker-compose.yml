@@ -38,3 +38,23 @@ services:
       - SOURCE=dmi
       - OUTPUT_DIR=/data
     restart: unless-stopped
+
+  ee-downloader:
+    image: ghcr.io/fmidev/opendata-radar-downloader:main
+    build: .
+    volumes:
+      - ./data/ee:/data
+    environment:
+      - SOURCE=ee
+      - OUTPUT_DIR=/data
+    restart: unless-stopped
+
+  dwd-downloader:
+    image: ghcr.io/fmidev/opendata-radar-downloader:main
+    build: .
+    volumes:
+      - ./data/dwd:/data
+    environment:
+      - SOURCE=dwd
+      - OUTPUT_DIR=/data
+    restart: unless-stopped

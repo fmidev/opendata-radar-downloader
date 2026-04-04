@@ -34,14 +34,15 @@ type Config struct {
 	EeURL         string
 	RadarObject   string
 	RadarNode     string
+	DwdURL        string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "metno", "smhi", "dmi", "ee":
+	case "fmi", "metno", "smhi", "dmi", "ee", "dwd":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, smhi, dmi, or ee", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, smhi, dmi, ee, or dwd", source)
 	}
 
 	cfg := &Config{
@@ -124,6 +125,10 @@ func LoadConfig() (*Config, error) {
 			prefix = "ee_radar_" + cfg.RadarNode
 		}
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", prefix)
+
+	case "dwd":
+		cfg.DwdURL = envOrDefault("DWD_URL", "https://opendata.dwd.de/weather/radar/composite/hx/")
+		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "dwd_radar")
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {

@@ -7,6 +7,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 - **SMHI** (Swedish Meteorological and Hydrological Institute) — Open Data API
 - **DMI** (Danish Meteorological Institute) — STAC API (HDF5 ODIM format, auto-converted to GeoTIFF)
 - **KAIA** (Estonian Environment Agency) — REST API (HDF5 ODIM format, auto-converted to GeoTIFF)
+- **DWD** (Deutscher Wetterdienst) — Open Data directory (HDF5 ODIM, HX 250m reflectivity composite)
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -21,6 +22,7 @@ Files are named with the observation timestamp and source prefix:
 20260331084500_dmi_radar.tif
 20260331084500_ee_radar.tif
 20260331084500_ee_radar_eehar.tif
+20260331084500_dwd_radar.tif
 ```
 
 ## Quick start
@@ -71,7 +73,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, `smhi`, `dmi`, or `ee` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, `smhi`, `dmi`, `ee`, or `dwd` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -124,6 +126,12 @@ Duration values use Go duration syntax (e.g., `30s`, `2m`, `1m30s`).
 
 Available radar nodes: `eehar` (Harku), `eesur` (Sürgavere).
 
+### DWD-specific (SOURCE=dwd)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DWD_URL` | `https://opendata.dwd.de/weather/radar/composite/hx/` | DWD open data directory URL |
+
 ### Examples
 
 Different FMI radar product:
@@ -166,7 +174,7 @@ docker run -d \
 
 ## Features
 
-- Multiple data sources: FMI WFS, MET Norway STAC API, SMHI Open Data, DMI STAC API, and Estonian KAIA API
+- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, and DWD
 - Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
 - SHA256 checksum verification (MET Norway)
 - Atomic file writes (temp file + rename) to prevent partial files
@@ -199,3 +207,4 @@ The CI pipeline (GitHub Actions) automatically builds and pushes to `ghcr.io/fmi
 - SMHI data: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
 - DMI data: [DMI Open Data](https://opendatadocs.dmi.govcloud.dk/)
 - Estonian data: [Estonian Environment Agency Open Data](https://avaandmed.keskkonnaportaal.ee/)
+- DWD data: [DWD Open Data](https://opendata.dwd.de/)
