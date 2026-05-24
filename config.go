@@ -35,14 +35,15 @@ type Config struct {
 	RadarObject   string
 	RadarNode     string
 	DwdURL        string
+	ChmiURL       string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "metno", "smhi", "dmi", "ee", "dwd":
+	case "fmi", "metno", "smhi", "dmi", "ee", "dwd", "chmi":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, smhi, dmi, ee, or dwd", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, smhi, dmi, ee, dwd, or chmi", source)
 	}
 
 	cfg := &Config{
@@ -131,6 +132,13 @@ func LoadConfig() (*Config, error) {
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "dwd_radar")
 		if cfg.Nodata == "" {
 			cfg.Nodata = "65535"
+		}
+
+	case "chmi":
+		cfg.ChmiURL = envOrDefault("CHMI_URL", "https://opendata.chmi.cz/meteorology/weather/radar/composite/pseudocappi2km/hdf5/")
+		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "chmi_radar")
+		if cfg.Nodata == "" {
+			cfg.Nodata = "255"
 		}
 	}
 

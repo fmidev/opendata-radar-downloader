@@ -16,7 +16,7 @@ Single `package main` with multiple files:
 - `main.go` — Entry point, signal handling, poll loop
 - `config.go` — Env var parsing, `Config` struct, `LoadConfig()`
 - `source.go` — `Source` interface, `RadarFile` struct, `newSource()` factory
-- `source_*.go` — One file per data source (fmi, metno, smhi, dmi, ee, dwd)
+- `source_*.go` — One file per data source (fmi, metno, smhi, dmi, ee, dwd, chmi)
 - `downloader.go` — Download, checksum, GDAL processing (reproject, COG, format conversion)
 - `Dockerfile` — Multi-stage build, Alpine + gdal-tools + gdal-driver-hdf5, non-root user
 - `.github/workflows/build.yml` — CI: go vet, build, push to ghcr.io
@@ -31,6 +31,7 @@ Single `package main` with multiple files:
 | DMI (Denmark) | STAC JSON | HDF5 ODIM | `dmi` |
 | KAIA (Estonia) | POST JSON | HDF5 ODIM | `ee` |
 | DWD (Germany) | HTML dir listing | HDF5 ODIM | `dwd` |
+| CHMI (Czech Republic) | HTML dir listing | HDF5 ODIM | `chmi` |
 
 ## Build & verify
 

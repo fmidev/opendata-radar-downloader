@@ -8,6 +8,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 - **DMI** (Danish Meteorological Institute) — STAC API (HDF5 ODIM format, auto-converted to GeoTIFF)
 - **KAIA** (Estonian Environment Agency) — REST API (HDF5 ODIM format, auto-converted to GeoTIFF)
 - **DWD** (Deutscher Wetterdienst) — Open Data directory (HDF5 ODIM, HX 250m reflectivity composite)
+- **CHMI** (Czech Hydrometeorological Institute) — Open Data directory (HDF5 ODIM, PCAPPI 2km reflectivity composite)
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -23,6 +24,7 @@ Files are named with the observation timestamp and source prefix:
 20260331084500_ee_radar.tif
 20260331084500_ee_radar_eehar.tif
 20260331084500_dwd_radar.tif
+20260331084500_chmi_radar.tif
 ```
 
 ## Quick start
@@ -73,7 +75,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, `smhi`, `dmi`, `ee`, or `dwd` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, `smhi`, `dmi`, `ee`, `dwd`, or `chmi` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -132,6 +134,16 @@ Available radar nodes: `eehar` (Harku), `eesur` (Sürgavere).
 |----------|---------|-------------|
 | `DWD_URL` | `https://opendata.dwd.de/weather/radar/composite/hx/` | DWD open data directory URL |
 
+When `SOURCE=dwd`, `NODATA` defaults to `65535` (the HX composite is uint16).
+
+### CHMI-specific (SOURCE=chmi)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CHMI_URL` | `https://opendata.chmi.cz/meteorology/weather/radar/composite/pseudocappi2km/hdf5/` | CHMI open data directory URL |
+
+When `SOURCE=chmi`, `NODATA` defaults to `255` (the PCAPPI composite is uint8).
+
 ### Examples
 
 Different FMI radar product:
@@ -174,7 +186,7 @@ docker run -d \
 
 ## Features
 
-- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, and DWD
+- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, DWD, and CHMI
 - Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
 - SHA256 checksum verification (MET Norway)
 - Atomic file writes (temp file + rename) to prevent partial files
@@ -208,3 +220,4 @@ The CI pipeline (GitHub Actions) automatically builds and pushes to `ghcr.io/fmi
 - DMI data: [DMI Open Data](https://opendatadocs.dmi.govcloud.dk/)
 - Estonian data: [Estonian Environment Agency Open Data](https://avaandmed.keskkonnaportaal.ee/)
 - DWD data: [DWD Open Data](https://opendata.dwd.de/)
+- CHMI data: [CHMI Open Data](https://opendata.chmi.cz/)

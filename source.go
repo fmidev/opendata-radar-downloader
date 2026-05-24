@@ -38,6 +38,8 @@ func newSource(cfg *Config) Source {
 		}
 	case "dwd":
 		return &DWDSource{URL: cfg.DwdURL}
+	case "chmi":
+		return &CHMISource{URL: cfg.ChmiURL}
 	default:
 		return &FMISource{URL: cfg.WFSURL, Prefix: cfg.FilePrefix}
 	}
