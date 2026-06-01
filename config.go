@@ -36,14 +36,16 @@ type Config struct {
 	RadarNode     string
 	DwdURL        string
 	ChmiURL       string
+	FmiS3URL      string
+	FmiRadars     []string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "metno", "smhi", "dmi", "ee", "dwd", "chmi":
+	case "fmi", "fmi_s3", "metno", "smhi", "dmi", "ee", "dwd", "chmi":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, metno, smhi, dmi, ee, dwd, or chmi", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, fmi_s3, metno, smhi, dmi, ee, dwd, or chmi", source)
 	}
 
 	cfg := &Config{
@@ -140,6 +142,31 @@ func LoadConfig() (*Config, error) {
 		if cfg.Nodata == "" {
 			cfg.Nodata = "255"
 		}
+
+	case "fmi_s3":
+		cfg.FmiS3URL = envOrDefault("FMI_S3_URL", "https://fmi-opendata-radar-volume-hdf5.s3.amazonaws.com/")
+
+		raw := os.Getenv("FMI_RADARS")
+		if strings.TrimSpace(raw) == "" {
+			return nil, fmt.Errorf("FMI_RADARS is required for SOURCE=fmi_s3 (comma-separated site codes, e.g. fivih,fikor)")
+		}
+		for _, part := range strings.Split(raw, ",") {
+			code := strings.ToLower(strings.TrimSpace(part))
+			if code == "" {
+				continue
+			}
+			if !validFmiRadar(code) {
+				return nil, fmt.Errorf("invalid FMI radar site %q: expected a code like fivih, fikor, fikuo", code)
+			}
+			cfg.FmiRadars = append(cfg.FmiRadars, code)
+		}
+		if len(cfg.FmiRadars) == 0 {
+			return nil, fmt.Errorf("FMI_RADARS contained no valid site codes")
+		}
+
+		// Files are stored per-radar (subdir + filename prefix); FilePrefix is
+		// only used for startup logging here.
+		cfg.FilePrefix = "fmi_radar"
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {
@@ -225,6 +252,21 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// validFmiRadar reports whether code looks like an FMI radar site code, e.g.
+// "fivih" or "fikor" — two-letter country prefix followed by a three-letter
+// site abbreviation, all lowercase.
+func validFmiRadar(code string) bool {
+	if len(code) != 5 || !strings.HasPrefix(code, "fi") {
+		return false
+	}
+	for _, r := range code {
+		if r < 'a' || r > 'z' {
+			return false
+		}
+	}
+	return true
 }
 
 func envOrDefault(key, fallback string) string {

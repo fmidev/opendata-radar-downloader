@@ -12,6 +12,9 @@ type RadarFile struct {
 	DownloadURL string
 	Checksum    string // optional, e.g. "multihash-sha256:abc..." from MET Norway
 	IsHDF5      bool   // true when the source knows the file is HDF5 (used when URL has no extension)
+	Subdir      string // optional: write under OutputDir/Subdir (e.g. per-radar directory)
+	Prefix      string // optional: override the filename prefix (defaults to cfg.FilePrefix)
+	Raw         bool   // optional: store the file as downloaded, skipping the GDAL pipeline
 }
 
 // Source fetches the list of currently available radar files from a provider.
@@ -40,6 +43,8 @@ func newSource(cfg *Config) Source {
 		return &DWDSource{URL: cfg.DwdURL}
 	case "chmi":
 		return &CHMISource{URL: cfg.ChmiURL}
+	case "fmi_s3":
+		return &FMIS3Source{URL: cfg.FmiS3URL, Radars: cfg.FmiRadars}
 	default:
 		return &FMISource{URL: cfg.WFSURL, Prefix: cfg.FilePrefix}
 	}

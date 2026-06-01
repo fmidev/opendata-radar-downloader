@@ -68,3 +68,14 @@ services:
       - SOURCE=chmi
       - OUTPUT_DIR=/data
     restart: unless-stopped
+
+  fmi-s3-downloader:
+    image: ghcr.io/fmidev/opendata-radar-downloader:main
+    build: .
+    volumes:
+      - ./data/fmi_s3:/data
+    environment:
+      - SOURCE=fmi_s3
+      - FMI_RADARS=fivih,fikor
+      - OUTPUT_DIR=/data
+    restart: unless-stopped

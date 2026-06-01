@@ -17,18 +17,50 @@ import (
 	"time"
 )
 
+// outputRelPath returns rf's destination path relative to cfg.OutputDir,
+// honouring any per-file Subdir/Prefix/Raw overrides set by the source.
+func (rf RadarFile) outputRelPath(cfg *Config) string {
+	prefix := cfg.FilePrefix
+	if rf.Prefix != "" {
+		prefix = rf.Prefix
+	}
+
+	ext := ".tif"
+	if rf.Raw {
+		ext = ".h5"
+		if strings.HasSuffix(rf.DownloadURL, ".hdf5") {
+			ext = ".hdf5"
+		}
+	}
+
+	name := rf.Timestamp.Format("20060102150405") + "_" + prefix + ext
+	if rf.Subdir != "" {
+		return filepath.Join(rf.Subdir, name)
+	}
+	return name
+}
+
 func DownloadIfNew(ctx context.Context, client *http.Client, rf RadarFile, cfg *Config) error {
-	fileName := rf.Timestamp.Format("20060102150405") + "_" + cfg.FilePrefix + ".tif"
-	filePath := filepath.Join(cfg.OutputDir, fileName)
+	isHDF5 := rf.IsHDF5 || strings.HasSuffix(rf.DownloadURL, ".h5") || strings.HasSuffix(rf.DownloadURL, ".hdf5")
+
+	relPath := rf.outputRelPath(cfg)
+	fileName := filepath.Base(relPath)
+	filePath := filepath.Join(cfg.OutputDir, relPath)
+
+	if dir := filepath.Dir(filePath); dir != filepath.Clean(cfg.OutputDir) {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("creating output directory %q: %w", dir, err)
+		}
+	}
 
 	if _, err := os.Stat(filePath); err == nil {
-		slog.Debug("file exists, skipping", "file", fileName)
+		slog.Debug("file exists, skipping", "file", relPath)
 		return nil
 	}
 
-	// Determine if we need GDAL processing
-	isHDF5 := rf.IsHDF5 || strings.HasSuffix(rf.DownloadURL, ".h5") || strings.HasSuffix(rf.DownloadURL, ".hdf5")
-	needsProcessing := cfg.COGEnabled || cfg.TargetEPSG != "" || isHDF5
+	// Raw sources (e.g. ODIM polar volumes) are stored exactly as downloaded;
+	// everything else goes through the GDAL pipeline (COG/reproject/format).
+	needsProcessing := !rf.Raw && (cfg.COGEnabled || cfg.TargetEPSG != "" || isHDF5)
 
 	downloadPath := filePath
 	if needsProcessing {

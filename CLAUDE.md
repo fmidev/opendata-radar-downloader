@@ -16,7 +16,7 @@ Single `package main` with multiple files:
 - `main.go` — Entry point, signal handling, poll loop
 - `config.go` — Env var parsing, `Config` struct, `LoadConfig()`
 - `source.go` — `Source` interface, `RadarFile` struct, `newSource()` factory
-- `source_*.go` — One file per data source (fmi, metno, smhi, dmi, ee, dwd, chmi)
+- `source_*.go` — One file per data source (fmi, fmi_s3, metno, smhi, dmi, ee, dwd, chmi)
 - `downloader.go` — Download, checksum, GDAL processing (reproject, COG, format conversion)
 - `Dockerfile` — Multi-stage build, Alpine + gdal-tools + gdal-driver-hdf5, non-root user
 - `.github/workflows/build.yml` — CI: go vet, build, push to ghcr.io
@@ -32,6 +32,7 @@ Single `package main` with multiple files:
 | KAIA (Estonia) | POST JSON | HDF5 ODIM | `ee` |
 | DWD (Germany) | HTML dir listing | HDF5 ODIM | `dwd` |
 | CHMI (Czech Republic) | HTML dir listing | HDF5 ODIM | `chmi` |
+| FMI volumes (Finland) | AWS S3 ListObjectsV2 (XML) | HDF5 ODIM PVOL (stored raw) | `fmi_s3` |
 
 ## Build & verify
 
@@ -48,6 +49,8 @@ docker build .
 - Each source filters to last 1 hour of data
 - GDAL pipeline: download → checksum → reproject → COG → atomic rename
 - HDF5 files detected by URL suffix (`.h5`) or `RadarFile.IsHDF5` flag
+- `RadarFile.Raw` stores the file as-is (skips GDAL); `RadarFile.Subdir`/`Prefix` route per-file output — `fmi_s3` uses them for one directory per radar
+- `fmi_s3` lists a public S3 bucket anonymously via ListObjectsV2 XML over `net/http` (no AWS SDK); retention/temp-cleanup walk subdirs and handle `.h5`
 - Source-specific env vars are scoped to their `case` block in `LoadConfig()`
 - Docker image tag is `:main` (not `:latest`)
 

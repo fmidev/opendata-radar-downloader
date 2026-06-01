@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -84,7 +85,7 @@ func poll(ctx context.Context, client *http.Client, cfg *Config, src Source, con
 		}
 		if err := DownloadIfNew(ctx, client, rf, cfg); err != nil {
 			slog.Error("download failed",
-				"file", rf.Timestamp.Format("20060102150405")+"_"+cfg.FilePrefix+".tif",
+				"file", rf.outputRelPath(cfg),
 				"error", err,
 			)
 			downloadErrors++
@@ -124,29 +125,33 @@ func writeHealthFile(outputDir string) {
 func purgeOldFiles(outputDir string, retention time.Duration) {
 	cutoff := time.Now().Add(-retention)
 
-	entries, err := os.ReadDir(outputDir)
-	if err != nil {
-		slog.Warn("failed to read output directory for purge", "error", err)
-		return
-	}
-
 	removed := 0
-	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".tif" {
-			continue
+	// Walk recursively: some sources (e.g. fmi_s3) write into per-radar
+	// subdirectories, and output files may be .tif or raw .h5/.hdf5.
+	err := filepath.WalkDir(outputDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
 		}
-		info, err := e.Info()
+		switch filepath.Ext(d.Name()) {
+		case ".tif", ".h5", ".hdf5":
+		default:
+			return nil
+		}
+		info, err := d.Info()
 		if err != nil {
-			continue
+			return nil
 		}
 		if info.ModTime().Before(cutoff) {
-			path := filepath.Join(outputDir, e.Name())
 			if err := os.Remove(path); err != nil {
-				slog.Warn("failed to remove old file", "file", e.Name(), "error", err)
+				slog.Warn("failed to remove old file", "file", path, "error", err)
 			} else {
 				removed++
 			}
 		}
+		return nil
+	})
+	if err != nil {
+		slog.Warn("failed to walk output directory for purge", "error", err)
 	}
 
 	if removed > 0 {
@@ -155,30 +160,44 @@ func purgeOldFiles(outputDir string, retention time.Duration) {
 }
 
 func cleanupTempFiles(outputDir string) {
-	patterns := []string{
-		filepath.Join(outputDir, ".download-*.tmp"),
-		filepath.Join(outputDir, "*.gdal.tmp"),
-		filepath.Join(outputDir, "*.cog.tmp"),
-		filepath.Join(outputDir, "*.raw"),
-		filepath.Join(outputDir, "*.h5"),
-	}
-
 	removed := 0
-	for _, pattern := range patterns {
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
-			continue
+	// Walk recursively so temp files left in per-radar subdirectories are also
+	// cleaned. Only intermediate artifacts are matched (see isTempFile) — raw
+	// .h5/.hdf5 output files are deliberately left intact.
+	err := filepath.WalkDir(outputDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
 		}
-		for _, f := range matches {
-			if err := os.Remove(f); err != nil {
-				slog.Warn("failed to remove temp file", "file", f, "error", err)
+		if isTempFile(d.Name()) {
+			if err := os.Remove(path); err != nil {
+				slog.Warn("failed to remove temp file", "file", path, "error", err)
 			} else {
 				removed++
 			}
 		}
+		return nil
+	})
+	if err != nil {
+		slog.Warn("failed to walk output directory for temp cleanup", "error", err)
 	}
 
 	if removed > 0 {
 		slog.Info("cleaned up stale temp files", "count", removed)
 	}
+}
+
+// isTempFile reports whether name is an intermediate artifact of the download
+// pipeline. The HDF5/raw intermediates are always named "<final>.tif.h5" /
+// "<final>.tif.raw", so matching the ".tif." infix avoids deleting raw .h5
+// output files (e.g. from the fmi_s3 source).
+func isTempFile(name string) bool {
+	if strings.HasPrefix(name, ".download-") && strings.HasSuffix(name, ".tmp") {
+		return true
+	}
+	for _, suffix := range []string{".gdal.tmp", ".cog.tmp", ".tif.raw", ".tif.h5", ".tif.hdf5"} {
+		if strings.HasSuffix(name, suffix) {
+			return true
+		}
+	}
+	return false
 }

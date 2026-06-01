@@ -9,6 +9,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 - **KAIA** (Estonian Environment Agency) — REST API (HDF5 ODIM format, auto-converted to GeoTIFF)
 - **DWD** (Deutscher Wetterdienst) — Open Data directory (HDF5 ODIM, HX 250m reflectivity composite)
 - **CHMI** (Czech Hydrometeorological Institute) — Open Data directory (HDF5 ODIM, PCAPPI 2km reflectivity composite)
+- **FMI radar volumes** (Finnish Meteorological Institute) — public AWS S3 bucket (HDF5 ODIM polar volumes, individual radars, stored raw)
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -25,6 +26,13 @@ Files are named with the observation timestamp and source prefix:
 20260331084500_ee_radar_eehar.tif
 20260331084500_dwd_radar.tif
 20260331084500_chmi_radar.tif
+```
+
+The `fmi_s3` source stores raw ODIM HDF5 polar volumes, with one directory per radar (`OUTPUT_DIR/<site>/`):
+
+```
+fivih/20260331084500_fivih.h5
+fikor/20260331084500_fikor.h5
 ```
 
 ## Quick start
@@ -75,7 +83,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi`, `metno`, `smhi`, `dmi`, `ee`, `dwd`, or `chmi` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `fmi_s3`, `metno`, `smhi`, `dmi`, `ee`, `dwd`, or `chmi` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -144,6 +152,28 @@ When `SOURCE=dwd`, `NODATA` defaults to `65535` (the HX composite is uint16).
 
 When `SOURCE=chmi`, `NODATA` defaults to `255` (the PCAPPI composite is uint8).
 
+### FMI S3-specific (SOURCE=fmi_s3)
+
+Downloads individual-radar ODIM HDF5 **polar volumes** (PVOL) directly from the
+public AWS S3 bucket `s3://fmi-opendata-radar-volume-hdf5/`. The bucket is read
+anonymously over HTTPS (S3 ListObjectsV2 REST API + object GETs — no AWS
+credentials or SDK required).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FMI_RADARS` | *(required)* | Comma-separated radar site codes, e.g. `fivih,fikor` |
+| `FMI_S3_URL` | `https://fmi-opendata-radar-volume-hdf5.s3.amazonaws.com/` | S3 bucket base URL |
+
+Each radar's files are written to a separate subdirectory under `OUTPUT_DIR`
+(`OUTPUT_DIR/<site>/`) and stored as **raw `.h5`** — polar volumes are not
+georeferenced rasters, so the GDAL pipeline (`COG_ENABLED`, `TARGET_EPSG`,
+`NODATA`, `COG_COMPRESS`) does not apply to this source.
+
+Known radar sites: `fianj` (Anjalankoski), `fikan` (Kankaanpää), `fikau`
+(Kauhava), `fikes` (Kesälahti), `fikor` (Korpo), `fikuo` (Kuopio), `filuo`
+(Luosto), `finur` (Nurmes), `fipet` (Petäjävesi), `fiuta` (Utajärvi), `fivih`
+(Vihti), `fivim` (Vimpeli).
+
 ### Examples
 
 Different FMI radar product:
@@ -174,6 +204,16 @@ docker run -d \
   ghcr.io/fmidev/opendata-radar-downloader:main
 ```
 
+FMI radar volumes from S3 (Vihti + Korpo, one directory per radar):
+```bash
+docker run -d \
+  -v $(pwd)/data:/data \
+  -e SOURCE=fmi_s3 \
+  -e FMI_RADARS=fivih,fikor \
+  -e OUTPUT_DIR=/data \
+  ghcr.io/fmidev/opendata-radar-downloader:main
+```
+
 MET Norway with COG re-optimization:
 ```bash
 docker run -d \
@@ -186,7 +226,10 @@ docker run -d \
 
 ## Features
 
-- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, DWD, and CHMI
+- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, DWD, CHMI, and FMI radar volumes (S3)
+- Anonymous AWS S3 access (ListObjectsV2 over HTTPS) — no AWS SDK or credentials
+- Individual-radar downloads with one output directory per radar (`fmi_s3`)
+- Raw passthrough for ODIM polar volumes (stored as `.h5`, bypassing GDAL)
 - Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
 - SHA256 checksum verification (MET Norway)
 - Atomic file writes (temp file + rename) to prevent partial files
