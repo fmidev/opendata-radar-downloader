@@ -45,6 +45,8 @@ func newSource(cfg *Config) Source {
 		return &CHMISource{URL: cfg.ChmiURL}
 	case "fmi_s3":
 		return &FMIS3Source{URL: cfg.FmiS3URL, Radars: cfg.FmiRadars}
+	case "dmi_volume":
+		return &DMIVolumeSource{URL: cfg.DmiVolumeURL, Radars: cfg.DmiRadars}
 	default:
 		return &FMISource{URL: cfg.WFSURL, Prefix: cfg.FilePrefix}
 	}

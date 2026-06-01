@@ -38,14 +38,16 @@ type Config struct {
 	ChmiURL       string
 	FmiS3URL      string
 	FmiRadars     []string
+	DmiVolumeURL  string
+	DmiRadars     []string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "fmi_s3", "metno", "smhi", "dmi", "ee", "dwd", "chmi":
+	case "fmi", "fmi_s3", "metno", "smhi", "dmi", "dmi_volume", "ee", "dwd", "chmi":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, fmi_s3, metno, smhi, dmi, ee, dwd, or chmi", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, fmi_s3, metno, smhi, dmi, dmi_volume, ee, dwd, or chmi", source)
 	}
 
 	cfg := &Config{
@@ -167,6 +169,31 @@ func LoadConfig() (*Config, error) {
 		// Files are stored per-radar (subdir + filename prefix); FilePrefix is
 		// only used for startup logging here.
 		cfg.FilePrefix = "fmi_radar"
+
+	case "dmi_volume":
+		cfg.DmiVolumeURL = envOrDefault("DMI_VOLUME_URL", "https://opendataapi.dmi.dk/v1/radardata/collections/volume/items")
+
+		raw := os.Getenv("DMI_RADARS")
+		if strings.TrimSpace(raw) == "" {
+			return nil, fmt.Errorf("DMI_RADARS is required for SOURCE=dmi_volume (comma-separated radar codes, e.g. dkste,dkrom)")
+		}
+		for _, part := range strings.Split(raw, ",") {
+			code := strings.ToLower(strings.TrimSpace(part))
+			if code == "" {
+				continue
+			}
+			if !validDmiRadar(code) {
+				return nil, fmt.Errorf("invalid DMI radar code %q: expected a code like dkste, dkrom, dksin", code)
+			}
+			cfg.DmiRadars = append(cfg.DmiRadars, code)
+		}
+		if len(cfg.DmiRadars) == 0 {
+			return nil, fmt.Errorf("DMI_RADARS contained no valid radar codes")
+		}
+
+		// Files are stored per-radar (subdir + filename prefix); FilePrefix is
+		// only used for startup logging here.
+		cfg.FilePrefix = "dmi_radar"
 	}
 
 	if v := os.Getenv("COG_ENABLED"); v != "" {
@@ -254,11 +281,11 @@ func LoadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// validFmiRadar reports whether code looks like an FMI radar site code, e.g.
-// "fivih" or "fikor" — two-letter country prefix followed by a three-letter
-// site abbreviation, all lowercase.
-func validFmiRadar(code string) bool {
-	if len(code) != 5 || !strings.HasPrefix(code, "fi") {
+// validRadarCode reports whether code looks like a "<country><site>" radar code
+// — a two-letter country prefix followed by a three-letter site abbreviation,
+// all lowercase (e.g. "fivih", "dkste").
+func validRadarCode(code, country string) bool {
+	if len(code) != 5 || !strings.HasPrefix(code, country) {
 		return false
 	}
 	for _, r := range code {
@@ -268,6 +295,10 @@ func validFmiRadar(code string) bool {
 	}
 	return true
 }
+
+func validFmiRadar(code string) bool { return validRadarCode(code, "fi") }
+
+func validDmiRadar(code string) bool { return validRadarCode(code, "dk") }
 
 func envOrDefault(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {

@@ -79,3 +79,14 @@ services:
       - FMI_RADARS=fivih,fikor
       - OUTPUT_DIR=/data
     restart: unless-stopped
+
+  dmi-volume-downloader:
+    image: ghcr.io/fmidev/opendata-radar-downloader:main
+    build: .
+    volumes:
+      - ./data/dmi_volume:/data
+    environment:
+      - SOURCE=dmi_volume
+      - DMI_RADARS=dkste,dkrom
+      - OUTPUT_DIR=/data
+    restart: unless-stopped

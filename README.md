@@ -10,6 +10,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 - **DWD** (Deutscher Wetterdienst) — Open Data directory (HDF5 ODIM, HX 250m reflectivity composite)
 - **CHMI** (Czech Hydrometeorological Institute) — Open Data directory (HDF5 ODIM, PCAPPI 2km reflectivity composite)
 - **FMI radar volumes** (Finnish Meteorological Institute) — public AWS S3 bucket (HDF5 ODIM polar volumes, individual radars, stored raw)
+- **DMI radar volumes** (Danish Meteorological Institute) — STAC API (HDF5 ODIM volume scans, individual radars, stored raw)
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -28,11 +29,13 @@ Files are named with the observation timestamp and source prefix:
 20260331084500_chmi_radar.tif
 ```
 
-The `fmi_s3` source stores raw ODIM HDF5 polar volumes, with one directory per radar (`OUTPUT_DIR/<site>/`):
+The `fmi_s3` and `dmi_volume` sources store raw ODIM HDF5 volume scans, with one directory per radar (`OUTPUT_DIR/<radar>/`):
 
 ```
 fivih/20260331084500_fivih.h5
 fikor/20260331084500_fikor.h5
+dkste/20260331084500_dkste.h5
+dkrom/20260331084500_dkrom.h5
 ```
 
 ## Quick start
@@ -83,7 +86,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi`, `fmi_s3`, `metno`, `smhi`, `dmi`, `ee`, `dwd`, or `chmi` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `fmi_s3`, `metno`, `smhi`, `dmi`, `dmi_volume`, `ee`, `dwd`, or `chmi` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -174,6 +177,29 @@ Known radar sites: `fianj` (Anjalankoski), `fikan` (Kankaanpää), `fikau`
 (Luosto), `finur` (Nurmes), `fipet` (Petäjävesi), `fiuta` (Utajärvi), `fivih`
 (Vihti), `fivim` (Vimpeli).
 
+### DMI volume-specific (SOURCE=dmi_volume)
+
+Downloads individual-radar ODIM HDF5 **volume scans** from DMI's STAC API
+(the `volume` collection). The API is queried anonymously over HTTPS (no API
+key required) and paginated via STAC `next` links.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DMI_RADARS` | *(required)* | Comma-separated radar codes, e.g. `dkste,dkrom` |
+| `DMI_VOLUME_URL` | `https://opendataapi.dmi.dk/v1/radardata/collections/volume/items` | STAC items endpoint |
+
+Like `fmi_s3`, each radar's files are written to a separate subdirectory under
+`OUTPUT_DIR` (`OUTPUT_DIR/<radar>/`) and stored as **raw `.h5`** — volume scans
+are not georeferenced rasters, so the GDAL pipeline (`COG_ENABLED`,
+`TARGET_EPSG`, `NODATA`, `COG_COMPRESS`) does not apply.
+
+Each radar emits both `doppler` and `fullRange` scan types (one file per
+~5 min slot); all are downloaded. The scan type is recorded inside the ODIM
+file, not in the filename.
+
+Known radars: `dkste` (Stevns), `dkrom` (Rømø), `dksin` (Sindal), `dkbor`
+(Bornholm), `dksam` (Samsø).
+
 ### Examples
 
 Different FMI radar product:
@@ -214,6 +240,16 @@ docker run -d \
   ghcr.io/fmidev/opendata-radar-downloader:main
 ```
 
+DMI radar volumes from STAC (Stevns + Rømø, one directory per radar):
+```bash
+docker run -d \
+  -v $(pwd)/data:/data \
+  -e SOURCE=dmi_volume \
+  -e DMI_RADARS=dkste,dkrom \
+  -e OUTPUT_DIR=/data \
+  ghcr.io/fmidev/opendata-radar-downloader:main
+```
+
 MET Norway with COG re-optimization:
 ```bash
 docker run -d \
@@ -226,10 +262,10 @@ docker run -d \
 
 ## Features
 
-- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, DWD, CHMI, and FMI radar volumes (S3)
+- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, DWD, CHMI, plus FMI and DMI radar volumes
 - Anonymous AWS S3 access (ListObjectsV2 over HTTPS) — no AWS SDK or credentials
-- Individual-radar downloads with one output directory per radar (`fmi_s3`)
-- Raw passthrough for ODIM polar volumes (stored as `.h5`, bypassing GDAL)
+- Individual-radar downloads with one output directory per radar (`fmi_s3`, `dmi_volume`)
+- Raw passthrough for ODIM volume scans (stored as `.h5`, bypassing GDAL)
 - Automatic conversion to Cloud Optimized GeoTIFF (COG) via GDAL
 - SHA256 checksum verification (MET Norway)
 - Atomic file writes (temp file + rename) to prevent partial files
