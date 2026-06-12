@@ -149,7 +149,7 @@ func (s *EESource) fetchPage(ctx context.Context, client *http.Client, query eeQ
 		rf := RadarFile{
 			Timestamp:   ts,
 			DownloadURL: downloadURL,
-			IsHDF5:      true,
+			Raw:         true,
 		}
 		// When fetching all nodes (SCAN with no RADAR_NODE), embed the node
 		// code in the filename so files from different radars are distinguishable.
