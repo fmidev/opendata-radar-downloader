@@ -16,6 +16,15 @@ var eeNodeToRadar = map[string]string{
 	"eesur": "Sürgavere radar (SUR)",
 }
 
+// eeRadarToNode is the reverse of eeNodeToRadar.
+var eeRadarToNode = func() map[string]string {
+	m := make(map[string]string, len(eeNodeToRadar))
+	for node, radar := range eeNodeToRadar {
+		m[radar] = node
+	}
+	return m
+}()
+
 // EESource fetches radar files from the Estonian Environment Agency (KAIA) API.
 type EESource struct {
 	URL         string
@@ -75,6 +84,7 @@ func (s *EESource) buildFilter(cutoff time.Time) map[string]any {
 		children = append(children, map[string]any{
 			"isEqual": map[string]string{"field": "Phenomenon", "value": "CAP"},
 		})
+		// When RADAR_NODE is set, filter to that specific radar; otherwise fetch all nodes.
 		if radarName, ok := eeNodeToRadar[s.RadarNode]; ok {
 			children = append(children, map[string]any{
 				"isEqual": map[string]string{"field": "Radar", "value": radarName},
@@ -136,11 +146,19 @@ func (s *EESource) fetchPage(ctx context.Context, client *http.Client, query eeQ
 		fm := doc.FileMetadata[0]
 		downloadURL := fmt.Sprintf("%s/%d/files/%d", baseURL, doc.ID, fm.ID)
 
-		files = append(files, RadarFile{
+		rf := RadarFile{
 			Timestamp:   ts,
 			DownloadURL: downloadURL,
 			IsHDF5:      true,
-		})
+		}
+		// When fetching all nodes (SCAN with no RADAR_NODE), embed the node
+		// code in the filename so files from different radars are distinguishable.
+		if s.RadarObject == "SCAN" && s.RadarNode == "" {
+			if node, ok := eeRadarToNode[doc.Metadata.Radar]; ok {
+				rf.Prefix = "ee_radar_" + node
+			}
+		}
+		files = append(files, rf)
 	}
 
 	return files, result.NextBookmark, nil

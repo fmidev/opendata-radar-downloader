@@ -111,10 +111,6 @@ func LoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("invalid RADAR_OBJECT %q: must be COMP or SCAN", cfg.RadarObject)
 		}
 
-		if cfg.RadarObject != "COMP" && cfg.RadarNode == "" {
-			return nil, fmt.Errorf("RADAR_NODE is required when RADAR_OBJECT is %q", cfg.RadarObject)
-		}
-
 		if cfg.RadarNode != "" {
 			if _, ok := eeNodeToRadar[cfg.RadarNode]; !ok {
 				known := make([]string, 0, len(eeNodeToRadar))
