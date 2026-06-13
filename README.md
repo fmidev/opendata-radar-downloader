@@ -11,6 +11,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 - **CHMI** (Czech Hydrometeorological Institute) — Open Data directory (HDF5 ODIM, PCAPPI 2km reflectivity composite)
 - **FMI radar volumes** (Finnish Meteorological Institute) — public AWS S3 bucket (HDF5 ODIM polar volumes, individual radars, stored raw)
 - **DMI radar volumes** (Danish Meteorological Institute) — STAC API (HDF5 ODIM volume scans, individual radars, stored raw)
+- **SMHI radar volumes** (Swedish Meteorological and Hydrological Institute) — Open Data API (HDF5 qcvol scans, one or all radars, stored raw)
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -86,7 +87,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi`, `fmi_s3`, `metno`, `smhi`, `dmi`, `dmi_volume`, `ee`, `dwd`, or `chmi` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `fmi_s3`, `metno`, `smhi`, `smhi_volume`, `dmi`, `dmi_volume`, `ee`, `dwd`, or `chmi` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -122,6 +123,17 @@ Duration values use Go duration syntax (e.g., `30s`, `2m`, `1m30s`).
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SMHI_URL` | `https://opendata-download-radar.smhi.se/api/version/latest/area/sweden/product/comp` | SMHI API base URL |
+
+### SMHI volume-specific (SOURCE=smhi_volume)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SMHI_VOLUME_URL` | `https://opendata-download-radar.smhi.se/api/version/latest` | SMHI API base URL |
+| `SMHI_AREA` | *(none)* | Radar area key to fetch (e.g. `angelholm`). Omit to fetch all radars. |
+
+Available areas: `angelholm`, `atvidaberg`, `balsta`, `hemse`, `hudiksvall`, `karlskrona`, `kiruna`, `leksand`, `lulea`, `ornskoldsvik`, `ostersund`, `vara`.
+
+Files are stored as raw HDF5 (`.h5`), named `smhi_radar_{area}.h5` in `OUTPUT_DIR`.
 
 ### DMI-specific (SOURCE=dmi)
 
@@ -264,7 +276,7 @@ docker run -d \
 
 ## Features
 
-- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, DWD, CHMI, plus FMI and DMI radar volumes
+- Multiple data sources: FMI, MET Norway, SMHI, DMI, Estonian KAIA, DWD, CHMI, plus FMI, DMI, and SMHI radar volumes
 - Anonymous AWS S3 access (ListObjectsV2 over HTTPS) — no AWS SDK or credentials
 - Individual-radar downloads with one output directory per radar (`fmi_s3`, `dmi_volume`)
 - Raw passthrough for ODIM volume scans (stored as `.h5`, bypassing GDAL)

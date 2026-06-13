@@ -31,6 +31,8 @@ func newSource(cfg *Config) Source {
 		return &MetNoSource{URL: cfg.StacURL, Limit: cfg.StacLimit}
 	case "smhi":
 		return &SMHISource{BaseURL: cfg.SmhiURL}
+	case "smhi_volume":
+		return &SMHIVolumeSource{BaseURL: cfg.SmhiVolumeURL, Area: cfg.SmhiArea}
 	case "dmi":
 		return &DMISource{URL: cfg.DmiURL}
 	case "ee":

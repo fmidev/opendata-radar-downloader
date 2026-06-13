@@ -38,16 +38,18 @@ type Config struct {
 	ChmiURL       string
 	FmiS3URL      string
 	FmiRadars     []string
-	DmiVolumeURL  string
-	DmiRadars     []string
+	DmiVolumeURL    string
+	DmiRadars       []string
+	SmhiVolumeURL   string
+	SmhiArea        string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "fmi_s3", "metno", "smhi", "dmi", "dmi_volume", "ee", "dwd", "chmi":
+	case "fmi", "fmi_s3", "metno", "smhi", "smhi_volume", "dmi", "dmi_volume", "ee", "dwd", "chmi":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, fmi_s3, metno, smhi, dmi, dmi_volume, ee, dwd, or chmi", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, fmi_s3, metno, smhi, smhi_volume, dmi, dmi_volume, ee, dwd, or chmi", source)
 	}
 
 	cfg := &Config{
@@ -95,6 +97,25 @@ func LoadConfig() (*Config, error) {
 	case "smhi":
 		cfg.SmhiURL = envOrDefault("SMHI_URL", "https://opendata-download-radar.smhi.se/api/version/latest/area/sweden/product/comp")
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "smhi_radar")
+
+	case "smhi_volume":
+		cfg.SmhiVolumeURL = envOrDefault("SMHI_VOLUME_URL", "https://opendata-download-radar.smhi.se/api/version/latest")
+		cfg.SmhiArea = os.Getenv("SMHI_AREA")
+		if cfg.SmhiArea != "" {
+			valid := false
+			for _, a := range smhiVolumeAreas {
+				if a == cfg.SmhiArea {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				return nil, fmt.Errorf("unknown SMHI_AREA %q; known areas: %s", cfg.SmhiArea, strings.Join(smhiVolumeAreas, ", "))
+			}
+			cfg.FilePrefix = envOrDefault("FILE_PREFIX", "smhi_radar_"+cfg.SmhiArea)
+		} else {
+			cfg.FilePrefix = envOrDefault("FILE_PREFIX", "smhi_radar_volume")
+		}
 
 	case "dmi":
 		cfg.DmiURL = envOrDefault("DMI_URL", "https://opendataapi.dmi.dk/v1/radardata/collections/composite/items")
