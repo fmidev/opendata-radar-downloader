@@ -146,12 +146,12 @@ Files are stored as raw HDF5 (`.h5`), named `smhi_radar_{area}.h5` in `OUTPUT_DI
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `EE_URL` | `https://avaandmed.keskkonnaportaal.ee/api/lists/active/items/query` | Estonian Environment Agency API endpoint |
-| `RADAR_OBJECT` | `COMP` | `COMP` for composite, `SCAN` for individual radar |
-| `RADAR_NODE` | *(none)* | OPERA node code to filter to a single radar when `RADAR_OBJECT=SCAN`. Omit to fetch all nodes. |
+| `RADAR_OBJECT` | `COMP` | `COMP` for composite, `SCAN` for individual CAPPI, `VOL` for polar volume |
+| `RADAR_NODE` | *(none)* | OPERA node code to filter to a single radar when `RADAR_OBJECT=SCAN` or `VOL`. Omit to fetch all nodes. |
 
 Available radar nodes: `eehar` (Harku), `eesur` (Sürgavere).
 
-When `RADAR_OBJECT=SCAN` and `RADAR_NODE` is omitted, files from all nodes are downloaded into the same `OUTPUT_DIR` with the node code in the filename (e.g. `20260331084500_ee_radar_eehar.h5`).
+When `RADAR_OBJECT=SCAN` or `VOL` and `RADAR_NODE` is omitted, files from all nodes are downloaded into the same `OUTPUT_DIR` with the node code in the filename (e.g. `20260331084500_ee_radar_eehar.h5`).
 
 ### DWD-specific (SOURCE=dwd)
 

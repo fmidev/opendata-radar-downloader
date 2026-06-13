@@ -127,9 +127,9 @@ func LoadConfig() (*Config, error) {
 		cfg.RadarNode = os.Getenv("RADAR_NODE")
 
 		switch cfg.RadarObject {
-		case "COMP", "SCAN":
+		case "COMP", "SCAN", "VOL":
 		default:
-			return nil, fmt.Errorf("invalid RADAR_OBJECT %q: must be COMP or SCAN", cfg.RadarObject)
+			return nil, fmt.Errorf("invalid RADAR_OBJECT %q: must be COMP, SCAN, or VOL", cfg.RadarObject)
 		}
 
 		if cfg.RadarNode != "" {
