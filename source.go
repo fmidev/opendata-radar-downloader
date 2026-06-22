@@ -41,6 +41,8 @@ func newSource(cfg *Config) Source {
 			RadarObject: cfg.RadarObject,
 			RadarNode:   cfg.RadarNode,
 		}
+	case "imgw":
+		return &IMGWSource{URL: cfg.ImgwURL}
 	case "dwd":
 		return &DWDSource{URL: cfg.DwdURL}
 	case "chmi":

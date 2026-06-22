@@ -16,7 +16,7 @@ Single `package main` with multiple files:
 - `main.go` — Entry point, signal handling, poll loop
 - `config.go` — Env var parsing, `Config` struct, `LoadConfig()`
 - `source.go` — `Source` interface, `RadarFile` struct, `newSource()` factory
-- `source_*.go` — One file per data source (fmi, fmi_s3, metno, smhi, smhi_volume, dmi, dmi_volume, ee, dwd, chmi)
+- `source_*.go` — One file per data source (fmi, fmi_s3, metno, smhi, smhi_volume, dmi, dmi_volume, ee, dwd, chmi, imgw)
 - `downloader.go` — Download, checksum, GDAL processing (reproject, COG, format conversion)
 - `Dockerfile` — Multi-stage build, Alpine + gdal-tools + gdal-driver-hdf5, non-root user
 - `.github/workflows/build.yml` — CI: go vet, build, push to ghcr.io
@@ -35,6 +35,7 @@ Single `package main` with multiple files:
 | FMI volumes (Finland) | AWS S3 ListObjectsV2 (XML) | HDF5 ODIM PVOL (stored raw) | `fmi_s3` |
 | DMI volumes (Denmark) | STAC JSON | HDF5 ODIM volume (stored raw) | `dmi_volume` |
 | SMHI volumes (Sweden) | REST JSON | HDF5 qcvol (stored raw) | `smhi_volume` |
+| IMGW-PIB (Poland) | REST JSON | HDF5 ODIM CMAX (COG via GDAL) | `imgw` |
 
 ## Build & verify
 

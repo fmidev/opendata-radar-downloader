@@ -42,14 +42,15 @@ type Config struct {
 	DmiRadars       []string
 	SmhiVolumeURL   string
 	SmhiArea        string
+	ImgwURL         string
 }
 
 func LoadConfig() (*Config, error) {
 	source := envOrDefault("SOURCE", "fmi")
 	switch source {
-	case "fmi", "fmi_s3", "metno", "smhi", "smhi_volume", "dmi", "dmi_volume", "ee", "dwd", "chmi":
+	case "fmi", "fmi_s3", "metno", "smhi", "smhi_volume", "dmi", "dmi_volume", "ee", "dwd", "chmi", "imgw":
 	default:
-		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, fmi_s3, metno, smhi, smhi_volume, dmi, dmi_volume, ee, dwd, or chmi", source)
+		return nil, fmt.Errorf("invalid SOURCE %q: must be fmi, fmi_s3, metno, smhi, smhi_volume, dmi, dmi_volume, ee, dwd, chmi, or imgw", source)
 	}
 
 	cfg := &Config{
@@ -147,6 +148,10 @@ func LoadConfig() (*Config, error) {
 			prefix = "ee_radar_" + cfg.RadarNode
 		}
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", prefix)
+
+	case "imgw":
+		cfg.ImgwURL = envOrDefault("IMGW_URL", "https://danepubliczne.imgw.pl/api/data/product/id/COMPO_CMAX_250.comp.cmax")
+		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "imgw_radar")
 
 	case "dwd":
 		cfg.DwdURL = envOrDefault("DWD_URL", "https://opendata.dwd.de/weather/radar/composite/hx/")

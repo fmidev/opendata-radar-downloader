@@ -12,6 +12,7 @@ Continuously polls radar data APIs and downloads GeoTIFF files as they become av
 - **FMI radar volumes** (Finnish Meteorological Institute) — public AWS S3 bucket (HDF5 ODIM polar volumes, individual radars, stored raw)
 - **DMI radar volumes** (Danish Meteorological Institute) — STAC API (HDF5 ODIM volume scans, individual radars, stored raw)
 - **SMHI radar volumes** (Swedish Meteorological and Hydrological Institute) — Open Data API (HDF5 qcvol scans, one or all radars, stored raw)
+- **IMGW-PIB** (Polish Institute of Meteorology and Water Management) — REST API (HDF5 ODIM CMAX composite, auto-converted to GeoTIFF)
 
 New radar images are published every 5 minutes. The downloader polls at a configurable interval (default 60 s), detects new files, and writes them to disk with atomic writes to prevent partial files.
 
@@ -87,7 +88,7 @@ All configuration is via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE` | `fmi` | Data source: `fmi`, `fmi_s3`, `metno`, `smhi`, `smhi_volume`, `dmi`, `dmi_volume`, `ee`, `dwd`, or `chmi` |
+| `SOURCE` | `fmi` | Data source: `fmi`, `fmi_s3`, `metno`, `smhi`, `smhi_volume`, `dmi`, `dmi_volume`, `ee`, `dwd`, `chmi`, or `imgw` |
 | `OUTPUT_DIR` | `.` | Directory to write downloaded files |
 | `FILE_PREFIX` | *(auto from source)* | Override filename prefix |
 | `POLL_INTERVAL` | `60s` | Time between polls |
@@ -152,6 +153,12 @@ Files are stored as raw HDF5 (`.h5`), named `smhi_radar_{area}.h5` in `OUTPUT_DI
 Available radar nodes: `eehar` (Harku), `eesur` (Sürgavere).
 
 When `RADAR_OBJECT=SCAN` or `VOL` and `RADAR_NODE` is omitted, files from all nodes are downloaded into the same `OUTPUT_DIR` with the node code in the filename (e.g. `20260331084500_ee_radar_eehar.h5`).
+
+### IMGW-specific (SOURCE=imgw)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IMGW_URL` | `https://danepubliczne.imgw.pl/api/data/product/id/COMPO_CMAX_250.comp.cmax` | IMGW product API URL |
 
 ### DWD-specific (SOURCE=dwd)
 
