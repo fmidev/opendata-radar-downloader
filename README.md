@@ -158,7 +158,10 @@ When `RADAR_OBJECT=SCAN` or `VOL` and `RADAR_NODE` is omitted, files from all no
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `IMGW_URL` | `https://danepubliczne.imgw.pl/api/data/product/id/COMPO_CMAX_250.comp.cmax` | IMGW product API URL |
+| `IMGW_URL` | `https://danepubliczne.imgw.pl/api/data/product/id/COMPO_CMAX_250.comp.cmax` | IMGW product listing API URL |
+| `IMGW_DOWNLOAD_URL` | `https://danepubliczne.imgw.pl/en/datastore/getfiledown/Oper/Polrad/Produkty/HVD/HVD_COMPO_CMAX_250.comp.cmax` | Base URL for file downloads |
+
+When `SOURCE=imgw`, `NODATA` defaults to `255`. Projection: Azimuthal Equidistant (`+proj=aeqd`), centred on Poland (lon=19.09°, lat=52.35°), 900×900 grid at ~1 km resolution.
 
 ### DWD-specific (SOURCE=dwd)
 

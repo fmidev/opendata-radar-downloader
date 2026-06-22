@@ -43,6 +43,7 @@ type Config struct {
 	SmhiVolumeURL   string
 	SmhiArea        string
 	ImgwURL         string
+	ImgwDownloadURL string
 }
 
 func LoadConfig() (*Config, error) {
@@ -151,7 +152,11 @@ func LoadConfig() (*Config, error) {
 
 	case "imgw":
 		cfg.ImgwURL = envOrDefault("IMGW_URL", "https://danepubliczne.imgw.pl/api/data/product/id/COMPO_CMAX_250.comp.cmax")
+		cfg.ImgwDownloadURL = envOrDefault("IMGW_DOWNLOAD_URL", "https://danepubliczne.imgw.pl/en/datastore/getfiledown/Oper/Polrad/Produkty/HVD/HVD_COMPO_CMAX_250.comp.cmax")
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "imgw_radar")
+		if cfg.Nodata == "" {
+			cfg.Nodata = "255"
+		}
 
 	case "dwd":
 		cfg.DwdURL = envOrDefault("DWD_URL", "https://opendata.dwd.de/weather/radar/composite/hx/")

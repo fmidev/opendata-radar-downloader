@@ -11,7 +11,8 @@ import (
 
 // IMGWSource fetches radar composite (CMAX) files from IMGW-PIB's open data API.
 type IMGWSource struct {
-	URL string // e.g. https://danepubliczne.imgw.pl/api/data/product/id/COMPO_CMAX_250.comp.cmax
+	URL         string // API listing URL
+	DownloadURL string // base URL for file downloads (different path from API URLs)
 }
 
 func (s *IMGWSource) Name() string { return "imgw_radar" }
@@ -58,7 +59,7 @@ func (s *IMGWSource) FetchFiles(ctx context.Context, client *http.Client) ([]Rad
 		}
 		files = append(files, RadarFile{
 			Timestamp:   t,
-			DownloadURL: e.URL,
+			DownloadURL: strings.TrimRight(s.DownloadURL, "/") + "/" + e.File,
 			IsHDF5:      true,
 		})
 	}
