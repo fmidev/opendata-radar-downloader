@@ -20,8 +20,9 @@ import (
 // both doppler and fullRange scan types (one file per ~5 min slot), all of
 // which are downloaded.
 type DMIVolumeSource struct {
-	URL    string   // STAC items URL
-	Radars []string // radar codes, e.g. dkste, dkrom
+	URL      string   // STAC items URL
+	Radars   []string // radar codes, e.g. dkste, dkrom
+	FlatOutput bool   // write all radars to OUTPUT_DIR directly instead of per-radar subdirs
 }
 
 func (s *DMIVolumeSource) Name() string { return "dmi_volume" }
@@ -64,14 +65,17 @@ func (s *DMIVolumeSource) FetchFiles(ctx context.Context, client *http.Client) (
 				continue
 			}
 
-			files = append(files, RadarFile{
+			rf := RadarFile{
 				Timestamp:   t,
 				DownloadURL: f.Asset.Data.Href,
 				IsHDF5:      true,
 				Raw:         true,
-				Subdir:      code,
 				Prefix:      code,
-			})
+			}
+			if !s.FlatOutput {
+				rf.Subdir = code
+			}
+			files = append(files, rf)
 		}
 
 		reqURL = next

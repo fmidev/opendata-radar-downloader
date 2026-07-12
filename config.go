@@ -40,6 +40,7 @@ type Config struct {
 	FmiRadars     []string
 	DmiVolumeURL    string
 	DmiRadars       []string
+	DmiFlatOutput   bool
 	SmhiVolumeURL   string
 	SmhiArea        string
 	ImgwURL         string
@@ -218,8 +219,10 @@ func LoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("DMI_RADARS contained no valid radar codes")
 		}
 
-		// Files are stored per-radar (subdir + filename prefix); FilePrefix is
-		// only used for startup logging here.
+		cfg.DmiFlatOutput = os.Getenv("DMI_FLAT_OUTPUT") == "true" || os.Getenv("DMI_FLAT_OUTPUT") == "1"
+
+		// With flat output the radar code is in the filename prefix; without it
+		// files go into per-radar subdirs. FilePrefix is only used for startup logging.
 		cfg.FilePrefix = "dmi_radar"
 	}
 

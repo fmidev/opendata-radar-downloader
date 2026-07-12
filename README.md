@@ -211,6 +211,7 @@ key required) and paginated via STAC `next` links.
 |----------|---------|-------------|
 | `DMI_RADARS` | *(required)* | Comma-separated radar codes, e.g. `dkste,dkrom` |
 | `DMI_VOLUME_URL` | `https://opendataapi.dmi.dk/v1/radardata/collections/volume/items` | STAC items endpoint |
+| `DMI_FLAT_OUTPUT` | `false` | Write all radars flat into `OUTPUT_DIR` (radar code in filename) instead of per-radar subdirs |
 
 Like `fmi_s3`, each radar's files are written to a separate subdirectory under
 `OUTPUT_DIR` (`OUTPUT_DIR/<radar>/`) and stored as **raw `.h5`** — volume scans
