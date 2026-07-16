@@ -43,7 +43,8 @@ type Config struct {
 	DmiFlatOutput   bool
 	SmhiVolumeURL   string
 	SmhiArea        string
-	ImgwURL         string
+	ImgwListURL     string
+	ImgwListPath    string
 	ImgwDownloadURL string
 }
 
@@ -152,7 +153,8 @@ func LoadConfig() (*Config, error) {
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", prefix)
 
 	case "imgw":
-		cfg.ImgwURL = envOrDefault("IMGW_URL", "https://danepubliczne.imgw.pl/api/data/product/id/COMPO_CMAX_250.comp.cmax")
+		cfg.ImgwListURL = envOrDefault("IMGW_LIST_URL", "https://danepubliczne.imgw.pl/en/datastore/getFilesList")
+		cfg.ImgwListPath = envOrDefault("IMGW_LIST_PATH", "Oper/Polrad/Produkty/HVD/HVD_COMPO_CMAX_250.comp.cmax")
 		cfg.ImgwDownloadURL = envOrDefault("IMGW_DOWNLOAD_URL", "https://danepubliczne.imgw.pl/en/datastore/getfiledown/Oper/Polrad/Produkty/HVD/HVD_COMPO_CMAX_250.comp.cmax")
 		cfg.FilePrefix = envOrDefault("FILE_PREFIX", "imgw_radar")
 		if cfg.Nodata == "" {
